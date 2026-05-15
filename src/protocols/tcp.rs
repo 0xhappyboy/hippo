@@ -1,0 +1,59 @@
+use crate::core::Core;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::net::{TcpListener, TcpStream};
+use tracing::{error, info};
+
+pub async fn run_tcp_server(core: Core, addr: &str) -> anyhow::Result<()> {
+    let listener = TcpListener::bind(addr).await?;
+    info!("TCP server listening on {}", addr);
+    loop {
+        let (stream, addr) = listener.accept().await?;
+        let core = core.clone();
+        tokio::spawn(async move {
+            if let Err(e) = handle_tcp_client(core, stream).await {
+                error!("TCP client {} error: {}", addr, e);
+            }
+        });
+    }
+}
+
+async fn handle_tcp_client(core: Core, mut stream: TcpStream) -> anyhow::Result<()> {
+    let (reader, mut writer) = stream.split();
+    let mut reader = BufReader::new(reader);
+    let mut line = String::new();
+    writer
+        .write_all(b"Hippo TCP Server\nAvailable skills: \n")
+        .await?;
+    writer.write_all(core.list_skills().as_bytes()).await?;
+    writer.write_all(b"\n> ").await?;
+    loop {
+        line.clear();
+        match reader.read_line(&mut line).await {
+            Ok(0) => break,
+            Ok(_) => {
+                let input = line.trim();
+                let result = core.process(input).await;
+                if result.response == "goodbye" {
+                    writer.write_all(b"Goodbye!\n").await?;
+                    break;
+                }
+                if result.matched {
+                    writer
+                        .write_all(format!("🦛 {}\n> ", result.response).as_bytes())
+                        .await?;
+                } else {
+                    writer
+                        .write_all(format!("❌ {}\n> ", result.response).as_bytes())
+                        .await?;
+                }
+            }
+            Err(e) => {
+                writer
+                    .write_all(format!("Error: {}\n", e).as_bytes())
+                    .await?;
+                break;
+            }
+        }
+    }
+    Ok(())
+}
