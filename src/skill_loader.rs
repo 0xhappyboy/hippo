@@ -5,8 +5,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-/// skill file dir name
-const SKILL_FILE_DIR: &str = "skills";
 /// skill file name
 const SKILL_FILE_NAME: &str = "SKILL.md";
 /// skill file scan min depth
@@ -442,7 +440,7 @@ Analyze the provided data.
 
     #[test]
     fn test_export_skills_registry_json_functions() {
-        let skills_dir = format!("./{}", SKILL_FILE_DIR).to_string();
+        let skills_dir = "./skills".to_string();
         let registry_value = SkillLoader::create_skills_registry_table_json(&skills_dir).unwrap();
         println!("{:?}", registry_value);
         println!("=== Registry Value ===");
@@ -469,7 +467,7 @@ Analyze the provided data.
 
     #[test]
     fn test_export_skills_registry_json_functions2() {
-        let skills_dir = format!("./{}", SKILL_FILE_DIR).to_string();
+        let skills_dir = "./skills".to_string();
         match SkillLoader::load_all(&skills_dir) {
             Ok(skills) => {
                 println!("Loaded {} skills", skills.len());
