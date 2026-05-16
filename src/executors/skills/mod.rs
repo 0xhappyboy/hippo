@@ -1,13 +1,17 @@
 pub mod common;
+pub mod document;
 pub mod file;
 pub mod helloworld;
 pub mod math;
+pub mod message;
 pub mod net;
 pub mod system;
 pub mod time;
 
+pub use document::*;
 pub use helloworld::HelloWorldSkill;
 pub use math::*;
+pub use message::*;
 pub use net::*;
 pub use system::*;
 pub use time::*;
