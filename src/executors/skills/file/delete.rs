@@ -2,8 +2,8 @@ use anyhow::Result;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
-
-use super::common;
+ 
+use crate::executors::skills::common;
 use crate::executors::types::Skill;
 
 #[derive(Debug)]
@@ -28,7 +28,7 @@ impl Skill for DeleteFileSkill {
             .get("recursive")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        let validated_path = common::validate_path(path, None)?;
+        let validated_path = common::File::validate_path(path, None)?;
         if !validated_path.exists() {
             anyhow::bail!("Path not found: {}", path);
         }

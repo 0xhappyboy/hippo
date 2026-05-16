@@ -2,8 +2,7 @@ use anyhow::Result;
 use serde_json::Value;
 use std::collections::HashMap;
 
-use super::common;
-use crate::executors::types::Skill;
+use crate::executors::{skills::common, types::Skill};
 
 #[derive(Debug)]
 pub struct UnitConverterSkill;
@@ -33,7 +32,7 @@ impl Skill for UnitConverterSkill {
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'to' parameter"))?
             .to_lowercase();
-        let value = common::validate_number(value_str)?;
+        let value = common::Math::validate_number(value_str)?;
         let result = convert_units(value, &from_unit, &to_unit)?;
         let precision = parameters
             .get("precision")
@@ -43,7 +42,7 @@ impl Skill for UnitConverterSkill {
             "{} {} = {} {}",
             value,
             from_unit,
-            common::format_number(result, precision as usize),
+            common::Math::format_number(result, precision as usize),
             to_unit
         ))
     }

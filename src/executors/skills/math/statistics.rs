@@ -2,8 +2,7 @@ use anyhow::Result;
 use serde_json::Value;
 use std::collections::HashMap;
 
-use super::common;
-use crate::executors::types::Skill;
+use crate::executors::{skills::common, types::Skill};
 
 #[derive(Debug)]
 pub struct StatisticsSkill;
@@ -78,7 +77,7 @@ impl Skill for StatisticsSkill {
         Ok(format!(
             "{} = {}",
             operation,
-            common::format_number(result, precision as usize)
+            common::Math::format_number(result, precision as usize)
         ))
     }
 

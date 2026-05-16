@@ -1,5 +1,4 @@
 pub mod calculator;
-pub mod common;
 pub mod converter;
 pub mod power;
 pub mod statistics;

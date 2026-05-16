@@ -55,10 +55,6 @@ static SKILL_REGISTRY: Lazy<RwLock<HashMap<String, Arc<dyn Skill>>>> = Lazy::new
         Arc::new(super::skills::HttpRequestSkill) as Arc<dyn Skill>,
     );
     registry.insert(
-        "net-websearch".to_string(),
-        Arc::new(super::skills::WebSearchSkill) as Arc<dyn Skill>,
-    );
-    registry.insert(
         "system-systeminfo".to_string(),
         Arc::new(super::skills::SystemInfoSkill) as Arc<dyn Skill>,
     );

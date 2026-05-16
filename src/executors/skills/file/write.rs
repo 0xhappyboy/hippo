@@ -2,8 +2,7 @@ use anyhow::Result;
 use serde_json::Value;
 use std::collections::HashMap;
 
-use super::common;
-use crate::executors::types::Skill;
+use crate::executors::{skills::common, types::Skill};
 
 #[derive(Debug)]
 pub struct WriteFileSkill;
@@ -31,21 +30,25 @@ impl Skill for WriteFileSkill {
             .get("append")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        let validated_path = common::validate_path(path, None)?;
+        let validated_path = common::File::validate_path(path, None)?;
         if let Some(parent) = validated_path.parent() {
-            common::ensure_dir(&parent.to_string_lossy())?;
+            common::File::ensure_dir(&parent.to_string_lossy())?;
         }
         if append {
-            let existing = if common::file_exists(&validated_path.to_string_lossy()) {
-                common::read_file_content(&validated_path.to_string_lossy())?
+            let existing = if common::File::file_exists(&validated_path.to_string_lossy()) {
+                common::File::read_file_content(&validated_path.to_string_lossy())?
             } else {
                 String::new()
             };
             let new_content = format!("{}{}", existing, content);
-            common::write_file_content(&validated_path.to_string_lossy(), &new_content, false)?;
+            common::File::write_file_content(
+                &validated_path.to_string_lossy(),
+                &new_content,
+                false,
+            )?;
             Ok(format!("Content appended to file: {}", path))
         } else {
-            common::write_file_content(&validated_path.to_string_lossy(), content, false)?;
+            common::File::write_file_content(&validated_path.to_string_lossy(), content, false)?;
             Ok(format!("Content written to file: {}", path))
         }
     }

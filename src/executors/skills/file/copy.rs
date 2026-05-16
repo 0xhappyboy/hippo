@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
 
-use super::common;
+use crate::executors::skills::common;
 use crate::executors::types::Skill;
 
 #[derive(Debug)]
@@ -32,13 +32,13 @@ impl Skill for CopyFileSkill {
             .get("move")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        let validated_source = common::validate_path(source, None)?;
-        let validated_dest = common::validate_path(destination, None)?;
+        let validated_source = common::File::validate_path(source, None)?;
+        let validated_dest = common::File::validate_path(destination, None)?;
         if !validated_source.exists() {
             anyhow::bail!("Source not found: {}", source);
         }
         if let Some(parent) = validated_dest.parent() {
-            common::ensure_dir(&parent.to_string_lossy())?;
+            common::File::ensure_dir(&parent.to_string_lossy())?;
         }
         if move_file {
             fs::rename(&validated_source, &validated_dest)?;
