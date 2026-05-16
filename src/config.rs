@@ -1,7 +1,6 @@
+use crate::envs;
 use once_cell::sync::Lazy;
 use std::sync::RwLock;
-
-use crate::envs;
 
 /// Hippox global configuration
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -24,7 +23,9 @@ pub struct HippoxConfig {
     // Telegram settings
     pub telegram_bot_token: String,
     // DingTalk settings
-    pub dingtalk_access_token: String,
+    pub dingding_access_token: String,
+    // Feishu settings
+    pub feishu_webhook: String,
 }
 
 impl Default for HippoxConfig {
@@ -43,7 +44,8 @@ impl Default for HippoxConfig {
             smtp_password: String::new(),
             smtp_from: String::new(),
             telegram_bot_token: String::new(),
-            dingtalk_access_token: String::new(),
+            dingding_access_token: String::new(),
+            feishu_webhook: String::new(),
         }
     }
 }
@@ -52,22 +54,23 @@ impl HippoxConfig {
     /// Load configuration from environment variables
     pub fn load_from_env() -> Self {
         Self {
-            lang: envs::get_env_or(envs::ENV_LANG, "en"),
-            provider: envs::get_env_or(envs::ENV_PROVIDER, "openai"),
-            enable_cli: envs::is_env_true(envs::ENV_ENABLE_CLI),
-            enable_tcp: envs::is_env_true(envs::ENV_ENABLE_TCP),
-            enable_http: envs::is_env_true(envs::ENV_ENABLE_HTTP),
-            enable_websocket: envs::is_env_true(envs::ENV_ENABLE_WS),
+            lang: envs::get_env_or(envs::HIPPOX_LANG, "en"),
+            provider: envs::get_env_or(envs::HIPPOX_PROVIDER, "openai"),
+            enable_cli: envs::is_env_true(envs::HIPPOX_ENABLE_CLI),
+            enable_tcp: envs::is_env_true(envs::HIPPOX_ENABLE_TCP),
+            enable_http: envs::is_env_true(envs::HIPPOX_ENABLE_HTTP),
+            enable_websocket: envs::is_env_true(envs::HIPPOX_ENABLE_WS),
             enable_grpc: false,
-            smtp_host: envs::get_env_or(envs::ENV_SMTP_HOST, ""),
-            smtp_port: envs::get_env_or(envs::ENV_SMTP_PORT, "587")
+            smtp_host: envs::get_env_or(envs::HIPPOX_SMTP_HOST, ""),
+            smtp_port: envs::get_env_or(envs::HIPPOX_SMTP_PORT, "587")
                 .parse::<u16>()
                 .unwrap_or(587),
-            smtp_username: envs::get_env_or(envs::ENV_SMTP_USERNAME, ""),
-            smtp_password: envs::get_env_or(envs::ENV_SMTP_PASSWORD, ""),
-            smtp_from: envs::get_env_or(envs::ENV_SMTP_FROM, ""),
-            telegram_bot_token: envs::get_env_or(envs::ENV_TELEGRAM_BOT_TOKEN, ""),
-            dingtalk_access_token: envs::get_env_or(envs::ENV_DINGDING_ACCESS_TOKEN, ""),
+            smtp_username: envs::get_env_or(envs::HIPPOX_SMTP_USERNAME, ""),
+            smtp_password: envs::get_env_or(envs::HIPPOX_SMTP_PASSWORD, ""),
+            smtp_from: envs::get_env_or(envs::HIPPOX_SMTP_FROM, ""),
+            telegram_bot_token: envs::get_env_or(envs::HIPPOX_TELEGRAM_BOT_TOKEN, ""),
+            dingding_access_token: envs::get_env_or(envs::HIPPOX_DINGDING_ACCESS_TOKEN, ""),
+            feishu_webhook: envs::get_env_or(envs::HIPPOX_FEISHU_WEBHOOK, ""),
         }
     }
 
@@ -86,6 +89,7 @@ impl HippoxConfig {
     }
 
     /// Load from optional parameters, only set fields that are Some
+    #[allow(clippy::too_many_arguments)]
     pub fn load_from_params(
         lang: Option<String>,
         provider: Option<String>,
@@ -100,7 +104,8 @@ impl HippoxConfig {
         smtp_password: Option<String>,
         smtp_from: Option<String>,
         telegram_bot_token: Option<String>,
-        dingtalk_access_token: Option<String>,
+        dingding_access_token: Option<String>,
+        feishu_webhook: Option<String>,
     ) -> Self {
         let mut config = Self::load_from_env();
         if let Some(v) = lang {
@@ -142,8 +147,11 @@ impl HippoxConfig {
         if let Some(v) = telegram_bot_token {
             config.telegram_bot_token = v;
         }
-        if let Some(v) = dingtalk_access_token {
-            config.dingtalk_access_token = v;
+        if let Some(v) = dingding_access_token {
+            config.dingding_access_token = v;
+        }
+        if let Some(v) = feishu_webhook {
+            config.feishu_webhook = v;
         }
         config
     }
@@ -193,15 +201,18 @@ impl HippoxConfig {
             config.telegram_bot_token = v.to_string();
         }
         if let Some(v) = overrides
-            .get("dingtalk_access_token")
+            .get("dingding_access_token")
             .and_then(|x| x.as_str())
         {
-            config.dingtalk_access_token = v.to_string();
+            config.dingding_access_token = v.to_string();
+        }
+        if let Some(v) = overrides.get("feishu_webhook").and_then(|x| x.as_str()) {
+            config.feishu_webhook = v.to_string();
         }
         Ok(config)
     }
 
-    /// is if SMTP is configured
+    /// Check if SMTP is configured
     pub fn is_smtp_configured(&self) -> bool {
         !self.smtp_host.is_empty()
             && !self.smtp_username.is_empty()
@@ -209,14 +220,19 @@ impl HippoxConfig {
             && !self.smtp_from.is_empty()
     }
 
-    /// is if Telegram is configured
+    /// Check if Telegram is configured
     pub fn is_telegram_configured(&self) -> bool {
         !self.telegram_bot_token.is_empty()
     }
 
-    /// is if DingTalk is configured
+    /// Check if DingTalk is configured
     pub fn is_dingtalk_configured(&self) -> bool {
-        !self.dingtalk_access_token.is_empty()
+        !self.dingding_access_token.is_empty()
+    }
+
+    /// Check if Feishu is configured
+    pub fn is_feishu_configured(&self) -> bool {
+        !self.feishu_webhook.is_empty()
     }
 }
 
@@ -248,6 +264,7 @@ pub fn init_config_from_json_file(path: &str) -> anyhow::Result<()> {
 }
 
 /// init global configuration from optional parameters
+#[allow(clippy::too_many_arguments)]
 pub fn init_config_from_params(
     lang: Option<String>,
     provider: Option<String>,
@@ -262,7 +279,8 @@ pub fn init_config_from_params(
     smtp_password: Option<String>,
     smtp_from: Option<String>,
     telegram_bot_token: Option<String>,
-    dingtalk_access_token: Option<String>,
+    dingding_access_token: Option<String>,
+    feishu_webhook: Option<String>,
 ) {
     let config = HippoxConfig::load_from_params(
         lang,
@@ -278,7 +296,8 @@ pub fn init_config_from_params(
         smtp_password,
         smtp_from,
         telegram_bot_token,
-        dingtalk_access_token,
+        dingding_access_token,
+        feishu_webhook,
     );
     let mut global = GLOBAL_CONFIG.write().unwrap();
     *global = config;

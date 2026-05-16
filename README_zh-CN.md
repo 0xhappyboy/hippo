@@ -64,7 +64,7 @@ hippox.start(config).await?;
 | HIPPOX_SMTP_PASSWORD         | SMTP 认证密码         | 无     | 邮箱密码                            |
 | HIPPOX_SMTP_FROM             | 默认发件人地址        | 无     | bot@example.com                     |
 | HIPPOX_TELEGRAM_BOT_TOKEN    | Telegram Bot Token    | 无     | 1234567890:xxxxxxxxxxxxxxxx         |
-| HIPPOX_DINGTALK_ACCESS_TOKEN | 钉钉机器人Token       | 无     | 钉钉 web hook token                 |
+| HIPPOX_DINGDING_ACCESS_TOKEN | 钉钉机器人Token       | 无     | 钉钉 web hook token                 |
 
 ## 支持协议
 

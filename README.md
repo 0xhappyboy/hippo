@@ -64,7 +64,7 @@ hippox.start(config).await?;
 | HIPPOX_SMTP_PASSWORD         | SMTP authentication password  | None    | your eamil password                 |
 | HIPPOX_SMTP_FROM             | Default sender email address  | None    | bot@example.com                     |
 | HIPPOX_TELEGRAM_BOT_TOKEN    | Telegram Bot Token            | None    | 1234567890:xxxxxxxxxxxxxxxx         |
-| HIPPOX_DINGTALK_ACCESS_TOKEN | dingding robot web hook token | None    | 钉钉web hook token                  |
+| HIPPOX_DINGDING_ACCESS_TOKEN | dingding robot web hook token | None    | 钉钉web hook token                  |
 
 ## Supported Protocols
 
