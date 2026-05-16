@@ -178,7 +178,9 @@ impl SkillLoader {
     }
 
     /// Scan and export all skills as a JSON registry Table (hot reload)
-    pub fn get_skills_registry_table_json(skills_dir: &str) -> anyhow::Result<serde_json::Value> {
+    pub fn create_skills_registry_table_json(
+        skills_dir: &str,
+    ) -> anyhow::Result<serde_json::Value> {
         let skills = Self::load_all(skills_dir)?;
         let registry_skills: Vec<serde_json::Value> = skills
             .iter()
@@ -202,8 +204,8 @@ impl SkillLoader {
     }
 
     /// Scan and export all skills as a JSON String registry Table (hot reload)
-    pub fn get_skills_registry_table_json_str(skills_dir: &str) -> anyhow::Result<String> {
-        let registry = Self::get_skills_registry_table_json(skills_dir)?;
+    pub fn create_skills_registry_table_json_str(skills_dir: &str) -> anyhow::Result<String> {
+        let registry = Self::create_skills_registry_table_json(skills_dir)?;
         Ok(serde_json::to_string_pretty(&registry)?)
     }
 }
@@ -441,7 +443,7 @@ Analyze the provided data.
     #[test]
     fn test_export_skills_registry_json_functions() {
         let skills_dir = format!("./{}", SKILL_FILE_DIR).to_string();
-        let registry_value = SkillLoader::get_skills_registry_table_json(&skills_dir).unwrap();
+        let registry_value = SkillLoader::create_skills_registry_table_json(&skills_dir).unwrap();
         println!("{:?}", registry_value);
         println!("=== Registry Value ===");
         println!("{}", serde_json::to_string_pretty(&registry_value).unwrap());
@@ -455,7 +457,7 @@ Analyze the provided data.
         {
             println!("  {}. {} - {}", i + 1, skill["name"], skill["description"]);
         }
-        let json_string = SkillLoader::get_skills_registry_table_json_str(&skills_dir).unwrap();
+        let json_string = SkillLoader::create_skills_registry_table_json_str(&skills_dir).unwrap();
         println!("\n=== JSON String (first 500 chars) ===");
         println!("{}", &json_string[..json_string.len().min(500)]);
         let parsed: serde_json::Value = serde_json::from_str(&json_string).unwrap();
@@ -479,7 +481,7 @@ Analyze the provided data.
                 println!("Error loading skills: {}", e);
             }
         }
-        let registry_value = SkillLoader::get_skills_registry_table_json(&skills_dir).unwrap();
+        let registry_value = SkillLoader::create_skills_registry_table_json(&skills_dir).unwrap();
         println!("{}", serde_json::to_string_pretty(&registry_value).unwrap());
     }
 }
