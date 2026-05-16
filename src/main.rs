@@ -6,6 +6,7 @@ mod service;
 mod skill_loader;
 mod skill_scheduler;
 mod types;
+mod executors;
 
 use langhub::types::ModelProvider;
 use std::env;
