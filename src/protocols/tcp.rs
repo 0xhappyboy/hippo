@@ -1,9 +1,11 @@
+use std::sync::Arc;
+
 use crate::core::Core;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tracing::{error, info};
 
-pub async fn run_tcp_server(core: Core, addr: &str) -> anyhow::Result<()> {
+pub async fn run_tcp_server(core: Arc<Core>, addr: &str) -> anyhow::Result<()> {
     let listener = TcpListener::bind(addr).await?;
     info!("TCP server listening on {}", addr);
     loop {
@@ -17,7 +19,7 @@ pub async fn run_tcp_server(core: Core, addr: &str) -> anyhow::Result<()> {
     }
 }
 
-async fn handle_tcp_client(core: Core, mut stream: TcpStream) -> anyhow::Result<()> {
+async fn handle_tcp_client(core: Arc<Core>, mut stream: TcpStream) -> anyhow::Result<()> {
     let (reader, mut writer) = stream.split();
     let mut reader = BufReader::new(reader);
     let mut line = String::new();

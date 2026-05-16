@@ -1,8 +1,8 @@
 use crate::core::Core;
-use std::io::Write;
+use std::{io::Write, sync::Arc};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
-pub async fn run_cli(core: &Core) -> anyhow::Result<()> {
+pub async fn run_cli(core: Arc<Core>) -> anyhow::Result<()> {
     println!("\n🚀 Hippo CLI - Connected to Core");
     println!("Available skills:\n{}\n", core.list_skills());
     let stdin = tokio::io::stdin();

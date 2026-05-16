@@ -1,4 +1,7 @@
+use crate::executors::Executor;
+use crate::global::Config;
 use crate::i18n;
+use crate::protocols;
 use crate::skill_loader::SkillLoader;
 use crate::skill_scheduler::SkillScheduler;
 use crate::t;
@@ -9,9 +12,32 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use tracing::info;
 
+/// Service configuration for which protocols to enable
+#[derive(Clone)]
+pub struct ServiceConfig {
+    pub enable_cli: bool,
+    pub enable_tcp: bool,
+    pub enable_http: bool,
+    pub enable_websocket: bool,
+    pub enable_grpc: bool,
+}
+
+impl Default for ServiceConfig {
+    fn default() -> Self {
+        Self {
+            enable_cli: true,
+            enable_tcp: false,
+            enable_http: false,
+            enable_websocket: false,
+            enable_grpc: false,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Core {
     scheduler: SkillScheduler,
+    executor: Executor,
     conversations: Arc<RwLock<HashMap<String, Vec<String>>>>,
 }
 
@@ -30,75 +56,59 @@ impl Core {
         }
         let llm = LLMClient::new(provider)?;
         let scheduler = SkillScheduler::new(skills, llm);
+        let executor = Executor::new();
         Ok(Self {
             scheduler,
+            executor,
             conversations: Arc::new(RwLock::new(HashMap::new())),
         })
     }
 
-    pub async fn run(&mut self) -> anyhow::Result<()> {
-        println!("\n🦛 {}", t!("app.running"));
-        println!("{}", t!("app.available_skills"));
-        println!("{}", self.scheduler.list_skills());
-        println!("\n💡 {}", t!("app.try_saying"));
-        println!("   {}\n", t!("app.type_exit"));
-        let stdin = tokio::io::stdin();
-        let mut reader = tokio::io::BufReader::new(stdin);
-        let mut line = String::new();
-        let session_id = "default".to_string();
-        loop {
-            print!("> ");
-            std::io::Write::flush(&mut std::io::stdout())?;
-            line.clear();
-            match tokio::io::AsyncBufReadExt::read_line(&mut reader, &mut line).await {
-                Ok(0) => break,
-                Ok(_) => {
-                    let input = line.trim();
-                    if input == "exit" || input == "quit" {
-                        println!("{}", t!("app.goodbye"));
-                        break;
-                    }
-                    if input == "clear" {
-                        let mut conversations = self.conversations.write().unwrap();
-                        conversations.remove(&session_id);
-                        println!("{}\n", t!("app.conversation_cleared"));
-                        continue;
-                    }
-                    if input.is_empty() {
-                        continue;
-                    }
-                    let history = {
-                        let conversations = self.conversations.read().unwrap();
-                        conversations
-                            .get(&session_id)
-                            .map(|h| h.join("\n"))
-                            .unwrap_or_default()
-                    };
-                    match self.scheduler.select_skill(input).await {
-                        Ok(Some(skill)) => {
-                            let response = self.scheduler.execute(skill, input, &history).await?;
-                            println!("🦛 {}\n", response);
-                            let mut conversations = self.conversations.write().unwrap();
-                            let hist = conversations.entry(session_id.clone()).or_default();
-                            hist.push(format!("User: {}", input));
-                            hist.push(format!("Assistant: {}", response));
-                        }
-                        Ok(None) => {
-                            println!("❌ {}", t!("skill.no_match", input));
-                            let response = self.scheduler.fallback_chat(input).await?;
-                            println!("🦛 {}\n", response);
-                        }
-                        Err(e) => {
-                            println!("❌ {}", t!("skill.error", e.to_string()));
-                        }
-                    }
+    /// Start the core with the given service configuration
+    pub async fn start(self, config: ServiceConfig) -> anyhow::Result<()> {
+        let core = Arc::new(self);
+        if config.enable_cli {
+            let core_cli = core.clone();
+            tokio::spawn(async move {
+                info!("Starting CLI interface");
+                if let Err(e) = protocols::cli::run_cli(core_cli).await {
+                    eprintln!("CLI error: {}", e);
                 }
-                Err(e) => {
-                    eprintln!("Error reading input: {}", e);
-                    break;
-                }
-            }
+            });
         }
+        if config.enable_tcp {
+            let core_tcp = core.clone();
+            tokio::spawn(async move {
+                let addr = Config::tcp_address();
+                info!("Starting TCP server on {}", addr);
+                if let Err(e) = protocols::tcp::run_tcp_server(core_tcp, &addr).await {
+                    eprintln!("TCP server error: {}", e);
+                }
+            });
+        }
+        if config.enable_http {
+            let core_http = core.clone();
+            tokio::spawn(async move {
+                let addr = Config::http_address();
+                info!("Starting HTTP server on http://{}", addr);
+                if let Err(e) = protocols::http::run_http_server(core_http, &addr).await {
+                    eprintln!("HTTP server error: {}", e);
+                }
+            });
+        }
+        if config.enable_websocket {
+            let core_ws = core.clone();
+            tokio::spawn(async move {
+                let addr = Config::websocket_address();
+                info!("Starting WebSocket server on ws://{}", addr);
+                if let Err(e) = protocols::websocket::run_websocket_server(core_ws, &addr).await {
+                    eprintln!("WebSocket server error: {}", e);
+                }
+            });
+        }
+        // Wait for shutdown signal
+        tokio::signal::ctrl_c().await?;
+        info!("Shutting down...");
         Ok(())
     }
 
@@ -135,7 +145,30 @@ impl Core {
                 skill_name: None,
             };
         }
-        // Match all skills
+        // First, try to parse as a skill call JSON from LLM
+        if let Ok(call) = self.executor.parse_skill_call(input_trimmed) {
+            match self.executor.execute(&call).await {
+                Ok(response) => {
+                    let mut conversations = self.conversations.write().unwrap();
+                    let hist = conversations.entry(session_id).or_default();
+                    hist.push(format!("User: {}", input));
+                    hist.push(format!("Assistant: {}", response));
+                    return ProcessResult {
+                        response,
+                        matched: true,
+                        skill_name: Some(call.action),
+                    };
+                }
+                Err(e) => {
+                    return ProcessResult {
+                        response: format!("Skill execution error: {}", e),
+                        matched: false,
+                        skill_name: None,
+                    };
+                }
+            }
+        }
+        // Fallback to trigger-based skill selection
         match self.scheduler.select_skill(input).await {
             Ok(Some(skill)) => match self.scheduler.execute(skill, input, &history).await {
                 Ok(response) => {

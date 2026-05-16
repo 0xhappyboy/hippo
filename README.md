@@ -20,3 +20,14 @@ A skill-driven AI agent engine that automatically loads and executes skills simp
 | TCP       | 127.0.0.1:8080        |
 | HTTP      | http://127.0.0.1:8081 |
 | WebSocket | ws://127.0.0.1:8082   |
+
+## Environment Variables
+
+| Variable               | Default | Description                                     |
+| ---------------------- | ------- | ----------------------------------------------- |
+| HIPPO_LANG             | en      | Language setting (en/zh)                        |
+| HIPPO_LLM_PROVIDER_KEY | None    | LLM provider (openai/deepseek/anthropic/google) |
+| HIPPO_ENABLE_CLI       | true    | Enable CLI interface                            |
+| HIPPO_ENABLE_TCP       | false   | Enable TCP server on 127.0.0.1:8080             |
+| HIPPO_ENABLE_HTTP      | false   | Enable HTTP server on http://127.0.0.1:8081     |
+| HIPPO_ENABLE_WS        | false   | Enable WebSocket server on ws://127.0.0.1:8082  |

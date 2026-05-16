@@ -8,6 +8,7 @@ use serde_json::Value;
 /// 1. Parse JSON response from LLM into SkillCall
 /// 2. Look up the skill by name in the registry
 /// 3. Execute the skill with the provided parameters
+#[derive(Debug, Clone)]
 pub struct Executor;
 
 impl Executor {
