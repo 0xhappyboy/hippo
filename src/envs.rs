@@ -1,0 +1,58 @@
+/// Language setting (en/zh)
+pub const ENV_LANG: &str = "HIPPOX_LANG";
+
+/// LLM provider (openai, deepseek, anthropic, google)
+pub const ENV_PROVIDER: &str = "HIPPOX_PROVIDER";
+
+/// Enable CLI interface (true/false)
+pub const ENV_ENABLE_CLI: &str = "HIPPOX_ENABLE_CLI";
+
+/// Enable TCP server (true/false)
+pub const ENV_ENABLE_TCP: &str = "HIPPOX_ENABLE_TCP";
+
+/// Enable HTTP server (true/false)
+pub const ENV_ENABLE_HTTP: &str = "HIPPOX_ENABLE_HTTP";
+
+/// Enable WebSocket server (true/false)
+pub const ENV_ENABLE_WS: &str = "HIPPOX_ENABLE_WS";
+
+/// SMTP server hostname (e.g., smtp.gmail.com)
+pub const ENV_SMTP_HOST: &str = "HIPPOX_SMTP_HOST";
+
+/// SMTP server port (e.g., 587 for TLS, 465 for SSL)
+pub const ENV_SMTP_PORT: &str = "HIPPOX_SMTP_PORT";
+
+/// SMTP authentication username (usually email address)
+pub const ENV_SMTP_USERNAME: &str = "HIPPOX_SMTP_USERNAME";
+
+/// SMTP authentication password or app-specific password
+pub const ENV_SMTP_PASSWORD: &str = "HIPPOX_SMTP_PASSWORD";
+
+/// Default sender email address
+pub const ENV_SMTP_FROM: &str = "HIPPOX_SMTP_FROM";
+
+/// Telegram bot token (format: 1234567890:ABCdefGHIJKLMNopqrsTUVwxyz)
+pub const ENV_TELEGRAM_BOT_TOKEN: &str = "HIPPOX_TELEGRAM_BOT_TOKEN";
+
+/// DingDing robot access token
+pub const ENV_DINGDING_ACCESS_TOKEN: &str = "HIPPOX_DINGTALK_ACCESS_TOKEN";
+
+/// Get environment variable value with optional default
+pub fn get_env(key: &str) -> Option<String> {
+    std::env::var(key).ok()
+}
+
+/// Get environment variable or return default
+pub fn get_env_or(key: &str, default: &str) -> String {
+    std::env::var(key).unwrap_or_else(|_| default.to_string())
+}
+
+/// Check if environment variable is set to "true"
+pub fn is_env_true(key: &str) -> bool {
+    std::env::var(key).unwrap_or_else(|_| "false".to_string()) == "true"
+}
+
+/// Get required environment variable, returns error if not set
+pub fn get_required_env(key: &str) -> anyhow::Result<String> {
+    std::env::var(key).map_err(|_| anyhow::anyhow!("Environment variable '{}' is not set", key))
+}

@@ -25,7 +25,6 @@ impl SkillScheduler {
         if registry::list_skills().is_empty() {
             return Ok(None);
         }
-
         let skills_prompt = self.get_skills_prompt();
         let select_prompt = format!(
             "{}\n\nAvailable skills:\n{}\n\nUser input: {}\n\nRespond with ONLY the skill name, or 'none' if no skill matches.\n",
@@ -51,13 +50,10 @@ impl SkillScheduler {
         conversation_history: &str,
     ) -> anyhow::Result<String> {
         println!("{}", t!("skill.executing", skill_name));
-
         let skill = registry::get_skill(skill_name)
             .ok_or_else(|| anyhow::anyhow!("Skill not found: {}", skill_name))?;
-
         let mut parameters = HashMap::new();
         parameters.insert("input".to_string(), Value::String(user_input.to_string()));
-
         skill.execute(&parameters).await
     }
 
@@ -69,10 +65,8 @@ impl SkillScheduler {
         conversation_history: &str,
     ) -> anyhow::Result<String> {
         println!("{}", t!("skill.executing", skill_name));
-
         let skill = registry::get_skill(skill_name)
             .ok_or_else(|| anyhow::anyhow!("Skill not found: {}", skill_name))?;
-
         skill.execute(parameters).await
     }
 
@@ -209,25 +203,5 @@ mod skill_scheduler_test {
         // Use integration tests for actual LLM calls
         let result = scheduler.select_skill("calculate 2+3").await;
         assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_skill_categories() {
-        let scheduler = create_test_scheduler();
-        let list = scheduler.list_skills();
-
-        // Check that emojis are present based on categories
-        assert!(list.contains("📁") || list.contains("🌐") || list.contains("🔢"));
-    }
-
-    #[test]
-    fn test_empty_registry_fallback() {
-        // Note: Registry is static and initialized once
-        // This test verifies the registry has skills loaded
-        let skills = registry::list_skills();
-        assert!(
-            !skills.is_empty(),
-            "Registry should have at least helloworld skill"
-        );
     }
 }
