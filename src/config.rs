@@ -1,6 +1,7 @@
-use crate::envs;
 use once_cell::sync::Lazy;
 use std::sync::RwLock;
+
+use crate::envs;
 
 /// Hippox global configuration
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -26,6 +27,8 @@ pub struct HippoxConfig {
     pub dingding_access_token: String,
     // Feishu settings
     pub feishu_webhook: String,
+    // WeCom settings
+    pub wecom_webhook: String,
 }
 
 impl Default for HippoxConfig {
@@ -46,6 +49,7 @@ impl Default for HippoxConfig {
             telegram_bot_token: String::new(),
             dingding_access_token: String::new(),
             feishu_webhook: String::new(),
+            wecom_webhook: String::new(),
         }
     }
 }
@@ -71,6 +75,7 @@ impl HippoxConfig {
             telegram_bot_token: envs::get_env_or(envs::HIPPOX_TELEGRAM_BOT_TOKEN, ""),
             dingding_access_token: envs::get_env_or(envs::HIPPOX_DINGDING_ACCESS_TOKEN, ""),
             feishu_webhook: envs::get_env_or(envs::HIPPOX_FEISHU_WEBHOOK, ""),
+            wecom_webhook: envs::get_env_or(envs::HIPPOX_WECOM_WEBHOOK, ""),
         }
     }
 
@@ -106,6 +111,7 @@ impl HippoxConfig {
         telegram_bot_token: Option<String>,
         dingding_access_token: Option<String>,
         feishu_webhook: Option<String>,
+        wecom_webhook: Option<String>,
     ) -> Self {
         let mut config = Self::load_from_env();
         if let Some(v) = lang {
@@ -152,6 +158,9 @@ impl HippoxConfig {
         }
         if let Some(v) = feishu_webhook {
             config.feishu_webhook = v;
+        }
+        if let Some(v) = wecom_webhook {
+            config.wecom_webhook = v;
         }
         config
     }
@@ -209,6 +218,9 @@ impl HippoxConfig {
         if let Some(v) = overrides.get("feishu_webhook").and_then(|x| x.as_str()) {
             config.feishu_webhook = v.to_string();
         }
+        if let Some(v) = overrides.get("wecom_webhook").and_then(|x| x.as_str()) {
+            config.wecom_webhook = v.to_string();
+        }
         Ok(config)
     }
 
@@ -233,6 +245,11 @@ impl HippoxConfig {
     /// Check if Feishu is configured
     pub fn is_feishu_configured(&self) -> bool {
         !self.feishu_webhook.is_empty()
+    }
+
+    /// Check if WeCom is configured
+    pub fn is_wecom_configured(&self) -> bool {
+        !self.wecom_webhook.is_empty()
     }
 }
 
@@ -281,6 +298,7 @@ pub fn init_config_from_params(
     telegram_bot_token: Option<String>,
     dingding_access_token: Option<String>,
     feishu_webhook: Option<String>,
+    wecom_webhook: Option<String>,
 ) {
     let config = HippoxConfig::load_from_params(
         lang,
@@ -298,6 +316,7 @@ pub fn init_config_from_params(
         telegram_bot_token,
         dingding_access_token,
         feishu_webhook,
+        wecom_webhook,
     );
     let mut global = GLOBAL_CONFIG.write().unwrap();
     *global = config;

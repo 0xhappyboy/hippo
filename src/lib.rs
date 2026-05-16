@@ -65,6 +65,8 @@ mod tests {
             Some("sender@example.com".to_string()),
             Some("123456:ABC".to_string()),
             Some("dingtalk_token".to_string()),
+            None,
+            None,
         );
         let config = get_config();
         assert_eq!(config.lang, "zh");
@@ -80,7 +82,7 @@ mod tests {
         assert_eq!(config.smtp_password, "password");
         assert_eq!(config.smtp_from, "sender@example.com");
         assert_eq!(config.telegram_bot_token, "123456:ABC");
-        assert_eq!(config.dingtalk_access_token, "dingtalk_token");
+        assert_eq!(config.dingding_access_token, "dingtalk_token");
     }
 
     #[test]
@@ -175,6 +177,8 @@ telegram_bot_token = "test_token_123"
             Some("from@test.com".to_string()),
             Some("telegram_token".to_string()),
             Some("dingtalk_token".to_string()),
+            None,
+            None,
         );
         let config = get_config();
         assert!(config.is_smtp_configured());
@@ -182,6 +186,7 @@ telegram_bot_token = "test_token_123"
         assert!(config.is_dingtalk_configured());
         init_config_from_params(
             None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None, None,
         );
         let config = get_config();
         assert!(!config.is_smtp_configured());
@@ -206,6 +211,8 @@ telegram_bot_token = "test_token_123"
             None,
             None,
             Some("custom_token".to_string()),
+            None,
+            None,
             None,
         );
         assert_eq!(config.lang, "fr");

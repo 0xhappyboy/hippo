@@ -40,6 +40,9 @@ pub const HIPPOX_DINGDING_ACCESS_TOKEN: &str = "HIPPOX_DINGDING_ACCESS_TOKEN";
 /// Feishu bot webhook URL
 pub const HIPPOX_FEISHU_WEBHOOK: &str = "HIPPOX_FEISHU_WEBHOOK";
 
+/// WeCom (Enterprise WeChat) robot webhook URL
+pub const HIPPOX_WECOM_WEBHOOK: &str = "HIPPOX_WECOM_WEBHOOK";
+
 /// Get environment variable value with optional default
 pub fn get_env(key: &str) -> Option<String> {
     std::env::var(key).ok()

@@ -112,6 +112,14 @@ static SKILL_REGISTRY: Lazy<RwLock<HashMap<String, Arc<dyn Skill>>>> = Lazy::new
         "send-dingding".to_string(),
         Arc::new(super::skills::message::SendDingDingSkill) as Arc<dyn Skill>,
     );
+    registry.insert(
+        "send-feishu".to_string(),
+        Arc::new(super::skills::message::SendFeishuSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "send-wecom".to_string(),
+        Arc::new(super::skills::message::SendWecomSkill) as Arc<dyn Skill>,
+    );
     RwLock::new(registry)
 });
 
