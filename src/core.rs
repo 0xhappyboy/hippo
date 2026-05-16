@@ -2,13 +2,12 @@ use crate::executors::Executor;
 use crate::global::Config;
 use crate::i18n;
 use crate::protocols;
-use crate::skill_loader::SkillLoader;
 use crate::skill_scheduler::SkillScheduler;
 use crate::t;
 use crate::types::ProcessResult;
 use langhub::LLMClient;
-use langhub::types::{ChatMessage, ModelProvider};
-use serde_json::{Value, json};
+use langhub::types::ModelProvider;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use tracing::info;
@@ -68,13 +67,8 @@ impl Hippox {
     ) -> anyhow::Result<Self> {
         i18n::set_language(lang);
         info!("Loading skills from: {}", skills_dir);
-        let skills = SkillLoader::load_all(skills_dir)?;
-        info!("🦛 Loaded {} skills", skills.len());
-        for skill in &skills {
-            info!("   - {}: {}", skill.name, skill.description);
-        }
         let llm = LLMClient::new(provider)?;
-        let scheduler = SkillScheduler::new(skills, llm);
+        let scheduler = SkillScheduler::new(llm);
         let executor = Executor::new();
         Ok(Self {
             scheduler,

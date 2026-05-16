@@ -5,27 +5,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-/// skill file name
 const SKILL_FILE_NAME: &str = "SKILL.md";
-/// skill file scan min depth
 const SKILL_FILE_SCAN_MIN_DEPTH: usize = 1;
-/// skill file scan max depth
 const SKILL_FILE_SCAN_MAX_DEPTH: usize = 1;
 
-/// Skill parameter definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SkillParameter {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub param_type: String,
-    pub description: String,
-    #[serde(default)]
-    pub required: bool,
-    #[serde(default)]
-    pub default: Option<serde_json::Value>,
-}
-
-/// Skill trigger patterns
+/// Frontmatter trigger patterns
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillTrigger {
     pub patterns: Vec<String>,
@@ -33,9 +17,9 @@ pub struct SkillTrigger {
     pub case_sensitive: bool,
 }
 
-/// Metadata fields supporting arbitrary JSON
+/// Frontmatter metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SkillMetadata {
+pub struct SkillFrontmatterMetadata {
     pub author: Option<String>,
     pub version: Option<String>,
     pub emoji: Option<String>,
@@ -45,61 +29,44 @@ pub struct SkillMetadata {
     pub extra: HashMap<String, serde_json::Value>,
 }
 
-/// Complete Skill structure matching Lobster spec
+/// Complete SKILL.md structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Skill {
-    // Required fields
+pub struct SkillFile {
     pub name: String,
     pub description: String,
-    // Optional fields
     pub version: Option<String>,
     pub license: Option<String>,
     pub author: Option<String>,
     pub compatibility: Option<String>,
-    // Trigger conditions
     pub triggers: Option<SkillTrigger>,
-    // Tool permissions
     #[serde(default)]
     pub allowed_tools: Vec<String>,
-    // Dependencies on other skills
     #[serde(default)]
     pub dependencies: Vec<String>,
-    // Metadata
-    pub metadata: Option<SkillMetadata>,
-    // Parameter definitions
+    pub metadata: Option<SkillFrontmatterMetadata>,
     #[serde(default)]
-    pub parameters: Vec<SkillParameter>,
-    // Main instructions content (supports full Markdown structure)
+    pub parameters: Vec<crate::executors::types::SkillParameter>,
     pub instructions: String,
-    // File path
     pub path: PathBuf,
 }
 
 /// Frontmatter intermediate parsing structure
 #[derive(Debug, Deserialize)]
 struct SkillFrontmatter {
-    // Required
     name: String,
     description: String,
-    // Optional base fields
     version: Option<String>,
     license: Option<String>,
     author: Option<String>,
     compatibility: Option<String>,
-    // Triggers
     triggers: Option<SkillTrigger>,
-    // Tool permissions
     #[serde(default)]
     allowed_tools: Vec<String>,
-    // Dependencies
     #[serde(default)]
     dependencies: Vec<String>,
-    // Metadata
-    metadata: Option<SkillMetadata>,
-    // Parameter definitions
+    metadata: Option<SkillFrontmatterMetadata>,
     #[serde(default)]
-    parameters: Vec<SkillParameter>,
-    // Allow extra unknown fields for forward compatibility
+    parameters: Vec<crate::executors::types::SkillParameter>,
     #[serde(flatten)]
     extra: HashMap<String, serde_json::Value>,
 }
@@ -107,8 +74,8 @@ struct SkillFrontmatter {
 pub struct SkillLoader;
 
 impl SkillLoader {
-    /// Load all skills from directory
-    pub fn load_all(skills_dir: &str) -> anyhow::Result<Vec<Skill>> {
+    /// Load all SKILL.md files from directory
+    pub fn load_all(skills_dir: &str) -> anyhow::Result<Vec<SkillFile>> {
         let mut skills = Vec::new();
         let skills_path = Path::new(skills_dir);
         if !skills_path.exists() {
@@ -133,9 +100,9 @@ impl SkillLoader {
         Ok(skills)
     }
 
-    /// Load a single skill by name
-    pub fn load_by_name(skills_dir: &str, name: &str) -> anyhow::Result<Option<Skill>> {
-        let skill_path = Path::new(skills_dir).join(name).join("SKILL.md");
+    /// Load a single SKILL.md by name
+    pub fn load_by_name(skills_dir: &str, name: &str) -> anyhow::Result<Option<SkillFile>> {
+        let skill_path = Path::new(skills_dir).join(name).join(SKILL_FILE_NAME);
         if skill_path.exists() {
             Ok(Some(Self::parse_skill_file(&skill_path)?))
         } else {
@@ -143,11 +110,10 @@ impl SkillLoader {
         }
     }
 
-    /// Parse a SKILL.md file
-    fn parse_skill_file(path: &Path) -> anyhow::Result<Skill> {
+    fn parse_skill_file(path: &Path) -> anyhow::Result<SkillFile> {
         let content = fs::read_to_string(path)?;
         let (frontmatter, instructions) = Self::parse_frontmatter(&content)?;
-        Ok(Skill {
+        Ok(SkillFile {
             name: frontmatter.name,
             description: frontmatter.description,
             version: frontmatter.version,
@@ -164,7 +130,6 @@ impl SkillLoader {
         })
     }
 
-    /// Parse frontmatter from markdown content
     fn parse_frontmatter(content: &str) -> anyhow::Result<(SkillFrontmatter, String)> {
         let parts: Vec<&str> = content.splitn(3, "---").collect();
         if parts.len() < 3 {
@@ -173,38 +138,6 @@ impl SkillLoader {
         let frontmatter: SkillFrontmatter = serde_yaml::from_str(parts[1])?;
         let instructions = parts[2].trim().to_string();
         Ok((frontmatter, instructions))
-    }
-
-    /// Scan and export all skills as a JSON registry Table (hot reload)
-    pub fn create_skills_registry_table_json(
-        skills_dir: &str,
-    ) -> anyhow::Result<serde_json::Value> {
-        let skills = Self::load_all(skills_dir)?;
-        let registry_skills: Vec<serde_json::Value> = skills
-            .iter()
-            .map(|skill| {
-                serde_json::json!({
-                    "name": skill.name,
-                    "description": skill.description,
-                    "emoji": skill.metadata.as_ref().and_then(|m| m.emoji.clone()),
-                    "version": skill.version,
-                    "parameters": skill.parameters,
-                    "triggers": skill.triggers.as_ref().map(|t| &t.patterns),
-                    "allowed_tools": skill.allowed_tools,
-                })
-            })
-            .collect();
-        Ok(serde_json::json!({
-            "version": "1.0",
-            "total_skills": registry_skills.len(),
-            "skills": registry_skills,
-        }))
-    }
-
-    /// Scan and export all skills as a JSON String registry Table (hot reload)
-    pub fn create_skills_registry_table_json_str(skills_dir: &str) -> anyhow::Result<String> {
-        let registry = Self::create_skills_registry_table_json(skills_dir)?;
-        Ok(serde_json::to_string_pretty(&registry)?)
     }
 }
 
@@ -436,50 +369,5 @@ Analyze the provided data.
         let content = "No frontmatter here at all";
         let result = SkillLoader::parse_frontmatter(content);
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_export_skills_registry_json_functions() {
-        let skills_dir = "./skills".to_string();
-        let registry_value = SkillLoader::create_skills_registry_table_json(&skills_dir).unwrap();
-        println!("{:?}", registry_value);
-        println!("=== Registry Value ===");
-        println!("{}", serde_json::to_string_pretty(&registry_value).unwrap());
-        assert_eq!(registry_value["version"], "1.0");
-        println!("Total skills loaded: {}", registry_value["total_skills"]);
-        for (i, skill) in registry_value["skills"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .enumerate()
-        {
-            println!("  {}. {} - {}", i + 1, skill["name"], skill["description"]);
-        }
-        let json_string = SkillLoader::create_skills_registry_table_json_str(&skills_dir).unwrap();
-        println!("\n=== JSON String (first 500 chars) ===");
-        println!("{}", &json_string[..json_string.len().min(500)]);
-        let parsed: serde_json::Value = serde_json::from_str(&json_string).unwrap();
-        assert_eq!(parsed["version"], "1.0");
-        assert_eq!(parsed["total_skills"], registry_value["total_skills"]);
-        assert!(parsed["total_skills"].as_u64().unwrap() > 0);
-        println!("\nloaded {} skills", parsed["total_skills"]);
-    }
-
-    #[test]
-    fn test_export_skills_registry_json_functions2() {
-        let skills_dir = "./skills".to_string();
-        match SkillLoader::load_all(&skills_dir) {
-            Ok(skills) => {
-                println!("Loaded {} skills", skills.len());
-                for skill in &skills {
-                    println!("  - {}: {}", skill.name, skill.description);
-                }
-            }
-            Err(e) => {
-                println!("Error loading skills: {}", e);
-            }
-        }
-        let registry_value = SkillLoader::create_skills_registry_table_json(&skills_dir).unwrap();
-        println!("{}", serde_json::to_string_pretty(&registry_value).unwrap());
     }
 }
