@@ -106,6 +106,9 @@ mod tests {
             None,
             None,
             None,
+            None,
+            None,
+            None,
         );
         let config = get_config();
         assert_eq!(config.lang, "zh");
@@ -257,6 +260,9 @@ telegram_bot_token = "test_token_123"
             None,
             None,
             None,
+            None,
+            None,
+            None,
         );
         let config = get_config();
         assert!(config.is_smtp_configured());
@@ -266,7 +272,8 @@ telegram_bot_token = "test_token_123"
             None, None, None, None, None, None, None, None, None, None, None, None, None, None,
             None, None, None, None, None, None, None, None, None, None, None, None, None, None,
             None, None, None, None, None, None, None, None, None, None, None, None, None, None,
-            None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+            None, None,
         );
         let config = get_config();
         assert!(!config.is_smtp_configured());
@@ -291,6 +298,9 @@ telegram_bot_token = "test_token_123"
             None,
             None,
             Some("custom_token".to_string()),
+            None,
+            None,
+            None,
             None,
             None,
             None,

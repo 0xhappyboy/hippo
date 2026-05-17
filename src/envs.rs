@@ -112,6 +112,14 @@ pub const HIPPOX_SQLITE_PATH: &str = "HIPPOX_SQLITE_PATH";
 pub const HIPPOX_SQLITE_POOL_SIZE: &str = "HIPPOX_SQLITE_POOL_SIZE";
 pub const HIPPOX_SQLITE_TIMEOUT: &str = "HIPPOX_SQLITE_TIMEOUT";
 
+// ==================== GitHub Configuration ====================
+/// GitHub Personal Access Token
+pub const HIPPOX_GITHUB_TOKEN: &str = "HIPPOX_GITHUB_TOKEN";
+/// GitHub API URL (default: https://api.github.com)
+pub const HIPPOX_GITHUB_API_URL: &str = "HIPPOX_GITHUB_API_URL";
+/// GitHub API timeout in seconds
+pub const HIPPOX_GITHUB_TIMEOUT: &str = "HIPPOX_GITHUB_TIMEOUT";
+
 /// Get environment variable value with optional default
 pub fn get_env(key: &str) -> Option<String> {
     std::env::var(key).ok()

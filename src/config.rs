@@ -79,6 +79,10 @@ pub struct HippoxConfig {
     pub sqlite_path: String,
     pub sqlite_pool_size: usize,
     pub sqlite_timeout: u64,
+    // ==================== GitHub Settings ====================
+    pub github_token: String,
+    pub github_api_url: String,
+    pub github_timeout: u64,
 }
 
 impl Default for HippoxConfig {
@@ -146,6 +150,10 @@ impl Default for HippoxConfig {
             sqlite_path: String::new(),
             sqlite_pool_size: 5,
             sqlite_timeout: 30,
+            // GitHub defaults
+            github_token: String::new(),
+            github_api_url: "https://api.github.com".to_string(),
+            github_timeout: 30,
         }
     }
 }
@@ -254,6 +262,12 @@ impl HippoxConfig {
             sqlite_timeout: envs::get_env_or(envs::HIPPOX_SQLITE_TIMEOUT, "30")
                 .parse()
                 .unwrap_or(30),
+            // GitHub
+            github_token: envs::get_env_or(envs::HIPPOX_GITHUB_TOKEN, ""),
+            github_api_url: envs::get_env_or(envs::HIPPOX_GITHUB_API_URL, "https://api.github.com"),
+            github_timeout: envs::get_env_or(envs::HIPPOX_GITHUB_TIMEOUT, "30")
+                .parse()
+                .unwrap_or(30),
         }
     }
 
@@ -336,6 +350,10 @@ impl HippoxConfig {
         sqlite_path: Option<String>,
         sqlite_pool_size: Option<usize>,
         sqlite_timeout: Option<u64>,
+        // GitHub parameters
+        github_token: Option<String>,
+        github_api_url: Option<String>,
+        github_timeout: Option<u64>,
     ) -> Self {
         let mut config = Self::load_from_env();
         if let Some(v) = lang {
@@ -509,6 +527,16 @@ impl HippoxConfig {
         }
         if let Some(v) = sqlite_timeout {
             config.sqlite_timeout = v;
+        }
+        // GitHub
+        if let Some(v) = github_token {
+            config.github_token = v;
+        }
+        if let Some(v) = github_api_url {
+            config.github_api_url = v;
+        }
+        if let Some(v) = github_timeout {
+            config.github_timeout = v;
         }
         config
     }
@@ -693,7 +721,21 @@ impl HippoxConfig {
         if let Some(v) = overrides.get("sqlite_timeout").and_then(|x| x.as_u64()) {
             config.sqlite_timeout = v;
         }
+        // GitHub
+        if let Some(v) = overrides.get("github_token").and_then(|x| x.as_str()) {
+            config.github_token = v.to_string();
+        }
+        if let Some(v) = overrides.get("github_api_url").and_then(|x| x.as_str()) {
+            config.github_api_url = v.to_string();
+        }
+        if let Some(v) = overrides.get("github_timeout").and_then(|x| x.as_u64()) {
+            config.github_timeout = v;
+        }
         Ok(config)
+    }
+
+    pub fn is_github_configured(&self) -> bool {
+        !self.github_token.is_empty()
     }
 
     /// Check if SMTP is configured
@@ -844,6 +886,10 @@ pub fn init_config_from_params(
     sqlite_path: Option<String>,
     sqlite_pool_size: Option<usize>,
     sqlite_timeout: Option<u64>,
+    // GitHub parameters
+    github_token: Option<String>,
+    github_api_url: Option<String>,
+    github_timeout: Option<u64>,
 ) {
     let config = HippoxConfig::load_from_params(
         lang,
@@ -905,6 +951,9 @@ pub fn init_config_from_params(
         sqlite_path,
         sqlite_pool_size,
         sqlite_timeout,
+        github_token,
+        github_api_url,
+        github_timeout,
     );
     let mut global = GLOBAL_CONFIG.write().unwrap();
     *global = config;

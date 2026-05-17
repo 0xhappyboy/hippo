@@ -1,5 +1,6 @@
 pub mod common;
 pub mod db;
+pub mod devops;
 pub mod document;
 pub mod file;
 pub mod helloworld;
@@ -10,6 +11,7 @@ pub mod system;
 pub mod time;
 
 pub use db::*;
+pub use devops::*;
 pub use document::*;
 pub use helloworld::HelloWorldSkill;
 pub use math::*;
