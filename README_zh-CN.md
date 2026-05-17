@@ -6,7 +6,7 @@
 </h1>
 <h4 align="center">
 一个可靠的AI代理引擎.
-一个Skill驱动的AI代理引擎, 你只需要编写 `SKILL.md` 文件来描述技能就能自动加载并执行,它不绑定任何前端——CLI、TCP、HTTP、WebSocket都可以接入.
+一个Skill驱动的AI代理引擎, 你只需要编写 `SKILL.md` 文件来描述技能就能自动加载并执行.
 </h4>
 <p align="center">
   <a href="https://github.com/0xhappyboy/hippo/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache2.0-d1d1f6.svg?style=flat&labelColor=1C2C2E&color=BEC5C9&logo=googledocs&label=license&logoColor=BEC5C9" alt="License"></a>
