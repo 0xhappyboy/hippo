@@ -48,6 +48,10 @@ let config = ServiceConfig {
 hippox.start(config).await?;
 ```
 
+## SKill Scheduling Model
+
+<img src="./resources/scheduler_en.png" width="100%">
+
 ## Atomic Skill List
 
 | Skill Name           | Description                                    | Parameters                                                                          | Category  |

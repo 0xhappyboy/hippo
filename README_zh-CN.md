@@ -48,6 +48,10 @@ let config = ServiceConfig {
 hippox.start(config).await?;
 ```
 
+## Skill调度模型
+
+<img src="./resources/scheduler_cn.png" width="100%">
+
 ## 原子Skill清单
 
 | Skill 名称           | 描述                                      | 参数                                                                      | 分类     |
