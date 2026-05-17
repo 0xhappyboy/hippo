@@ -81,6 +81,37 @@ pub const HIPPOX_UDP_ENCODING: &str = "HIPPOX_UDP_ENCODING";
 /// UDP enable broadcast
 pub const HIPPOX_UDP_BROADCAST: &str = "HIPPOX_UDP_BROADCAST";
 
+// ==================== PostgreSQL Configuration ====================
+pub const HIPPOX_PG_HOST: &str = "HIPPOX_PG_HOST";
+pub const HIPPOX_PG_PORT: &str = "HIPPOX_PG_PORT";
+pub const HIPPOX_PG_DATABASE: &str = "HIPPOX_PG_DATABASE";
+pub const HIPPOX_PG_USERNAME: &str = "HIPPOX_PG_USERNAME";
+pub const HIPPOX_PG_PASSWORD: &str = "HIPPOX_PG_PASSWORD";
+pub const HIPPOX_PG_POOL_SIZE: &str = "HIPPOX_PG_POOL_SIZE";
+pub const HIPPOX_PG_TIMEOUT: &str = "HIPPOX_PG_TIMEOUT";
+
+// ==================== MySQL Configuration ====================
+pub const HIPPOX_MYSQL_HOST: &str = "HIPPOX_MYSQL_HOST";
+pub const HIPPOX_MYSQL_PORT: &str = "HIPPOX_MYSQL_PORT";
+pub const HIPPOX_MYSQL_DATABASE: &str = "HIPPOX_MYSQL_DATABASE";
+pub const HIPPOX_MYSQL_USERNAME: &str = "HIPPOX_MYSQL_USERNAME";
+pub const HIPPOX_MYSQL_PASSWORD: &str = "HIPPOX_MYSQL_PASSWORD";
+pub const HIPPOX_MYSQL_POOL_SIZE: &str = "HIPPOX_MYSQL_POOL_SIZE";
+pub const HIPPOX_MYSQL_TIMEOUT: &str = "HIPPOX_MYSQL_TIMEOUT";
+
+// ==================== Redis Configuration ====================
+pub const HIPPOX_REDIS_HOST: &str = "HIPPOX_REDIS_HOST";
+pub const HIPPOX_REDIS_PORT: &str = "HIPPOX_REDIS_PORT";
+pub const HIPPOX_REDIS_PASSWORD: &str = "HIPPOX_REDIS_PASSWORD";
+pub const HIPPOX_REDIS_DB: &str = "HIPPOX_REDIS_DB";
+pub const HIPPOX_REDIS_POOL_SIZE: &str = "HIPPOX_REDIS_POOL_SIZE";
+pub const HIPPOX_REDIS_TIMEOUT: &str = "HIPPOX_REDIS_TIMEOUT";
+
+// ==================== SQLite Configuration ====================
+pub const HIPPOX_SQLITE_PATH: &str = "HIPPOX_SQLITE_PATH";
+pub const HIPPOX_SQLITE_POOL_SIZE: &str = "HIPPOX_SQLITE_POOL_SIZE";
+pub const HIPPOX_SQLITE_TIMEOUT: &str = "HIPPOX_SQLITE_TIMEOUT";
+
 /// Get environment variable value with optional default
 pub fn get_env(key: &str) -> Option<String> {
     std::env::var(key).ok()

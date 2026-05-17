@@ -159,6 +159,70 @@ static SKILL_REGISTRY: Lazy<RwLock<HashMap<String, Arc<dyn Skill>>>> = Lazy::new
         "udp-broadcast".to_string(),
         Arc::new(super::skills::udp::UdpBroadcastSkill) as Arc<dyn Skill>,
     );
+    // ==================== PostgreSQL Skills ====================
+    registry.insert(
+        "postgres-query".to_string(),
+        Arc::new(super::skills::postgresql::PostgresQuerySkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "postgres-execute".to_string(),
+        Arc::new(super::skills::postgresql::PostgresExecuteSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "postgres-list-tables".to_string(),
+        Arc::new(super::skills::postgresql::PostgresListTablesSkill) as Arc<dyn Skill>,
+    );
+    // ==================== MySQL Skills ====================
+    registry.insert(
+        "mysql-query".to_string(),
+        Arc::new(super::skills::mysql::MysqlQuerySkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "mysql-execute".to_string(),
+        Arc::new(super::skills::mysql::MysqlExecuteSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "mysql-list-tables".to_string(),
+        Arc::new(super::skills::mysql::MysqlListTablesSkill) as Arc<dyn Skill>,
+    );
+    // ==================== Redis Skills ====================
+    registry.insert(
+        "redis-set".to_string(),
+        Arc::new(super::skills::redis::RedisSetSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "redis-get".to_string(),
+        Arc::new(super::skills::redis::RedisGetSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "redis-del".to_string(),
+        Arc::new(super::skills::redis::RedisDelSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "redis-keys".to_string(),
+        Arc::new(super::skills::redis::RedisKeysSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "redis-hset".to_string(),
+        Arc::new(super::skills::redis::RedisHSetSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "redis-hget".to_string(),
+        Arc::new(super::skills::redis::RedisHGetSkill) as Arc<dyn Skill>,
+    );
+    // ==================== SQLite Skills ====================
+    registry.insert(
+        "sqlite-query".to_string(),
+        Arc::new(super::skills::sqlite::SqliteQuerySkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "sqlite-execute".to_string(),
+        Arc::new(super::skills::sqlite::SqliteExecuteSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "sqlite-list-tables".to_string(),
+        Arc::new(super::skills::sqlite::SqliteListTablesSkill) as Arc<dyn Skill>,
+    );
     RwLock::new(registry)
 });
 

@@ -52,6 +52,33 @@ pub struct HippoxConfig {
     pub udp_timeout: u64,
     pub udp_encoding: String,
     pub udp_broadcast: bool,
+    // ==================== PostgreSQL Settings ====================
+    pub pg_host: String,
+    pub pg_port: u16,
+    pub pg_database: String,
+    pub pg_username: String,
+    pub pg_password: String,
+    pub pg_pool_size: usize,
+    pub pg_timeout: u64,
+    // ==================== MySQL Settings ====================
+    pub mysql_host: String,
+    pub mysql_port: u16,
+    pub mysql_database: String,
+    pub mysql_username: String,
+    pub mysql_password: String,
+    pub mysql_pool_size: usize,
+    pub mysql_timeout: u64,
+    // ==================== Redis Settings ====================
+    pub redis_host: String,
+    pub redis_port: u16,
+    pub redis_password: String,
+    pub redis_db: usize,
+    pub redis_pool_size: usize,
+    pub redis_timeout: u64,
+    // ==================== SQLite Settings ====================
+    pub sqlite_path: String,
+    pub sqlite_pool_size: usize,
+    pub sqlite_timeout: u64,
 }
 
 impl Default for HippoxConfig {
@@ -92,6 +119,33 @@ impl Default for HippoxConfig {
             udp_timeout: 30,
             udp_encoding: "utf8".to_string(),
             udp_broadcast: false,
+            // PostgreSQL defaults
+            pg_host: String::new(),
+            pg_port: 5432,
+            pg_database: String::new(),
+            pg_username: String::new(),
+            pg_password: String::new(),
+            pg_pool_size: 10,
+            pg_timeout: 30,
+            // MySQL defaults
+            mysql_host: String::new(),
+            mysql_port: 3306,
+            mysql_database: String::new(),
+            mysql_username: String::new(),
+            mysql_password: String::new(),
+            mysql_pool_size: 10,
+            mysql_timeout: 30,
+            // Redis defaults
+            redis_host: String::new(),
+            redis_port: 6379,
+            redis_password: String::new(),
+            redis_db: 0,
+            redis_pool_size: 10,
+            redis_timeout: 30,
+            // SQLite defaults
+            sqlite_path: String::new(),
+            sqlite_pool_size: 5,
+            sqlite_timeout: 30,
         }
     }
 }
@@ -149,6 +203,57 @@ impl HippoxConfig {
                 .unwrap_or(30),
             udp_encoding: envs::get_env_or(envs::HIPPOX_UDP_ENCODING, "utf8"),
             udp_broadcast: envs::is_env_true(envs::HIPPOX_UDP_BROADCAST),
+            // PostgreSQL
+            pg_host: envs::get_env_or(envs::HIPPOX_PG_HOST, ""),
+            pg_port: envs::get_env_or(envs::HIPPOX_PG_PORT, "5432")
+                .parse()
+                .unwrap_or(5432),
+            pg_database: envs::get_env_or(envs::HIPPOX_PG_DATABASE, ""),
+            pg_username: envs::get_env_or(envs::HIPPOX_PG_USERNAME, ""),
+            pg_password: envs::get_env_or(envs::HIPPOX_PG_PASSWORD, ""),
+            pg_pool_size: envs::get_env_or(envs::HIPPOX_PG_POOL_SIZE, "10")
+                .parse()
+                .unwrap_or(10),
+            pg_timeout: envs::get_env_or(envs::HIPPOX_PG_TIMEOUT, "30")
+                .parse()
+                .unwrap_or(30),
+            // MySQL
+            mysql_host: envs::get_env_or(envs::HIPPOX_MYSQL_HOST, ""),
+            mysql_port: envs::get_env_or(envs::HIPPOX_MYSQL_PORT, "3306")
+                .parse()
+                .unwrap_or(3306),
+            mysql_database: envs::get_env_or(envs::HIPPOX_MYSQL_DATABASE, ""),
+            mysql_username: envs::get_env_or(envs::HIPPOX_MYSQL_USERNAME, ""),
+            mysql_password: envs::get_env_or(envs::HIPPOX_MYSQL_PASSWORD, ""),
+            mysql_pool_size: envs::get_env_or(envs::HIPPOX_MYSQL_POOL_SIZE, "10")
+                .parse()
+                .unwrap_or(10),
+            mysql_timeout: envs::get_env_or(envs::HIPPOX_MYSQL_TIMEOUT, "30")
+                .parse()
+                .unwrap_or(30),
+            // Redis
+            redis_host: envs::get_env_or(envs::HIPPOX_REDIS_HOST, ""),
+            redis_port: envs::get_env_or(envs::HIPPOX_REDIS_PORT, "6379")
+                .parse()
+                .unwrap_or(6379),
+            redis_password: envs::get_env_or(envs::HIPPOX_REDIS_PASSWORD, ""),
+            redis_db: envs::get_env_or(envs::HIPPOX_REDIS_DB, "0")
+                .parse()
+                .unwrap_or(0),
+            redis_pool_size: envs::get_env_or(envs::HIPPOX_REDIS_POOL_SIZE, "10")
+                .parse()
+                .unwrap_or(10),
+            redis_timeout: envs::get_env_or(envs::HIPPOX_REDIS_TIMEOUT, "30")
+                .parse()
+                .unwrap_or(30),
+            // SQLite
+            sqlite_path: envs::get_env_or(envs::HIPPOX_SQLITE_PATH, ""),
+            sqlite_pool_size: envs::get_env_or(envs::HIPPOX_SQLITE_POOL_SIZE, "5")
+                .parse()
+                .unwrap_or(5),
+            sqlite_timeout: envs::get_env_or(envs::HIPPOX_SQLITE_TIMEOUT, "30")
+                .parse()
+                .unwrap_or(30),
         }
     }
 
@@ -204,6 +309,33 @@ impl HippoxConfig {
         udp_timeout: Option<u64>,
         udp_encoding: Option<String>,
         udp_broadcast: Option<bool>,
+        // PostgreSQL parameters
+        pg_host: Option<String>,
+        pg_port: Option<u16>,
+        pg_database: Option<String>,
+        pg_username: Option<String>,
+        pg_password: Option<String>,
+        pg_pool_size: Option<usize>,
+        pg_timeout: Option<u64>,
+        // MySQL parameters
+        mysql_host: Option<String>,
+        mysql_port: Option<u16>,
+        mysql_database: Option<String>,
+        mysql_username: Option<String>,
+        mysql_password: Option<String>,
+        mysql_pool_size: Option<usize>,
+        mysql_timeout: Option<u64>,
+        // Redis parameters
+        redis_host: Option<String>,
+        redis_port: Option<u16>,
+        redis_password: Option<String>,
+        redis_db: Option<usize>,
+        redis_pool_size: Option<usize>,
+        redis_timeout: Option<u64>,
+        // SQLite parameters
+        sqlite_path: Option<String>,
+        sqlite_pool_size: Option<usize>,
+        sqlite_timeout: Option<u64>,
     ) -> Self {
         let mut config = Self::load_from_env();
         if let Some(v) = lang {
@@ -304,6 +436,79 @@ impl HippoxConfig {
         }
         if let Some(v) = udp_broadcast {
             config.udp_broadcast = v;
+        }
+        // PostgreSQL
+        if let Some(v) = pg_host {
+            config.pg_host = v;
+        }
+        if let Some(v) = pg_port {
+            config.pg_port = v;
+        }
+        if let Some(v) = pg_database {
+            config.pg_database = v;
+        }
+        if let Some(v) = pg_username {
+            config.pg_username = v;
+        }
+        if let Some(v) = pg_password {
+            config.pg_password = v;
+        }
+        if let Some(v) = pg_pool_size {
+            config.pg_pool_size = v;
+        }
+        if let Some(v) = pg_timeout {
+            config.pg_timeout = v;
+        }
+        // MySQL
+        if let Some(v) = mysql_host {
+            config.mysql_host = v;
+        }
+        if let Some(v) = mysql_port {
+            config.mysql_port = v;
+        }
+        if let Some(v) = mysql_database {
+            config.mysql_database = v;
+        }
+        if let Some(v) = mysql_username {
+            config.mysql_username = v;
+        }
+        if let Some(v) = mysql_password {
+            config.mysql_password = v;
+        }
+        if let Some(v) = mysql_pool_size {
+            config.mysql_pool_size = v;
+        }
+        if let Some(v) = mysql_timeout {
+            config.mysql_timeout = v;
+        }
+        // Redis
+        if let Some(v) = redis_host {
+            config.redis_host = v;
+        }
+        if let Some(v) = redis_port {
+            config.redis_port = v;
+        }
+        if let Some(v) = redis_password {
+            config.redis_password = v;
+        }
+        if let Some(v) = redis_db {
+            config.redis_db = v;
+        }
+        if let Some(v) = redis_pool_size {
+            config.redis_pool_size = v;
+        }
+        if let Some(v) = redis_timeout {
+            config.redis_timeout = v;
+        }
+        // SQLite
+        if let Some(v) = sqlite_path {
+            config.sqlite_path = v;
+        }
+        if let Some(v) = sqlite_pool_size {
+            config.sqlite_pool_size = v;
+        }
+        if let Some(v) = sqlite_timeout {
+            config.sqlite_timeout = v;
         }
         config
     }
@@ -415,6 +620,79 @@ impl HippoxConfig {
         if let Some(v) = overrides.get("udp_broadcast").and_then(|x| x.as_bool()) {
             config.udp_broadcast = v;
         }
+        // PostgreSQL
+        if let Some(v) = overrides.get("pg_host").and_then(|x| x.as_str()) {
+            config.pg_host = v.to_string();
+        }
+        if let Some(v) = overrides.get("pg_port").and_then(|x| x.as_u64()) {
+            config.pg_port = v as u16;
+        }
+        if let Some(v) = overrides.get("pg_database").and_then(|x| x.as_str()) {
+            config.pg_database = v.to_string();
+        }
+        if let Some(v) = overrides.get("pg_username").and_then(|x| x.as_str()) {
+            config.pg_username = v.to_string();
+        }
+        if let Some(v) = overrides.get("pg_password").and_then(|x| x.as_str()) {
+            config.pg_password = v.to_string();
+        }
+        if let Some(v) = overrides.get("pg_pool_size").and_then(|x| x.as_u64()) {
+            config.pg_pool_size = v as usize;
+        }
+        if let Some(v) = overrides.get("pg_timeout").and_then(|x| x.as_u64()) {
+            config.pg_timeout = v;
+        }
+        // MySQL
+        if let Some(v) = overrides.get("mysql_host").and_then(|x| x.as_str()) {
+            config.mysql_host = v.to_string();
+        }
+        if let Some(v) = overrides.get("mysql_port").and_then(|x| x.as_u64()) {
+            config.mysql_port = v as u16;
+        }
+        if let Some(v) = overrides.get("mysql_database").and_then(|x| x.as_str()) {
+            config.mysql_database = v.to_string();
+        }
+        if let Some(v) = overrides.get("mysql_username").and_then(|x| x.as_str()) {
+            config.mysql_username = v.to_string();
+        }
+        if let Some(v) = overrides.get("mysql_password").and_then(|x| x.as_str()) {
+            config.mysql_password = v.to_string();
+        }
+        if let Some(v) = overrides.get("mysql_pool_size").and_then(|x| x.as_u64()) {
+            config.mysql_pool_size = v as usize;
+        }
+        if let Some(v) = overrides.get("mysql_timeout").and_then(|x| x.as_u64()) {
+            config.mysql_timeout = v;
+        }
+        // Redis
+        if let Some(v) = overrides.get("redis_host").and_then(|x| x.as_str()) {
+            config.redis_host = v.to_string();
+        }
+        if let Some(v) = overrides.get("redis_port").and_then(|x| x.as_u64()) {
+            config.redis_port = v as u16;
+        }
+        if let Some(v) = overrides.get("redis_password").and_then(|x| x.as_str()) {
+            config.redis_password = v.to_string();
+        }
+        if let Some(v) = overrides.get("redis_db").and_then(|x| x.as_u64()) {
+            config.redis_db = v as usize;
+        }
+        if let Some(v) = overrides.get("redis_pool_size").and_then(|x| x.as_u64()) {
+            config.redis_pool_size = v as usize;
+        }
+        if let Some(v) = overrides.get("redis_timeout").and_then(|x| x.as_u64()) {
+            config.redis_timeout = v;
+        }
+        // SQLite
+        if let Some(v) = overrides.get("sqlite_path").and_then(|x| x.as_str()) {
+            config.sqlite_path = v.to_string();
+        }
+        if let Some(v) = overrides.get("sqlite_pool_size").and_then(|x| x.as_u64()) {
+            config.sqlite_pool_size = v as usize;
+        }
+        if let Some(v) = overrides.get("sqlite_timeout").and_then(|x| x.as_u64()) {
+            config.sqlite_timeout = v;
+        }
         Ok(config)
     }
 
@@ -459,6 +737,22 @@ impl HippoxConfig {
     /// Check if UDP is configured
     pub fn is_udp_configured(&self) -> bool {
         self.udp_port > 0
+    }
+
+    pub fn is_postgresql_configured(&self) -> bool {
+        !self.pg_host.is_empty() && !self.pg_database.is_empty()
+    }
+
+    pub fn is_mysql_configured(&self) -> bool {
+        !self.mysql_host.is_empty() && !self.mysql_database.is_empty()
+    }
+
+    pub fn is_redis_configured(&self) -> bool {
+        !self.redis_host.is_empty()
+    }
+
+    pub fn is_sqlite_configured(&self) -> bool {
+        !self.sqlite_path.is_empty()
     }
 }
 
@@ -523,6 +817,33 @@ pub fn init_config_from_params(
     udp_timeout: Option<u64>,
     udp_encoding: Option<String>,
     udp_broadcast: Option<bool>,
+    // PostgreSQL parameters
+    pg_host: Option<String>,
+    pg_port: Option<u16>,
+    pg_database: Option<String>,
+    pg_username: Option<String>,
+    pg_password: Option<String>,
+    pg_pool_size: Option<usize>,
+    pg_timeout: Option<u64>,
+    // MySQL parameters
+    mysql_host: Option<String>,
+    mysql_port: Option<u16>,
+    mysql_database: Option<String>,
+    mysql_username: Option<String>,
+    mysql_password: Option<String>,
+    mysql_pool_size: Option<usize>,
+    mysql_timeout: Option<u64>,
+    // Redis parameters
+    redis_host: Option<String>,
+    redis_port: Option<u16>,
+    redis_password: Option<String>,
+    redis_db: Option<usize>,
+    redis_pool_size: Option<usize>,
+    redis_timeout: Option<u64>,
+    // SQLite parameters
+    sqlite_path: Option<String>,
+    sqlite_pool_size: Option<usize>,
+    sqlite_timeout: Option<u64>,
 ) {
     let config = HippoxConfig::load_from_params(
         lang,
@@ -557,6 +878,33 @@ pub fn init_config_from_params(
         udp_timeout,
         udp_encoding,
         udp_broadcast,
+        // PostgreSQL parameters
+        pg_host,
+        pg_port,
+        pg_database,
+        pg_username,
+        pg_password,
+        pg_pool_size,
+        pg_timeout,
+        // MySQL parameters
+        mysql_host,
+        mysql_port,
+        mysql_database,
+        mysql_username,
+        mysql_password,
+        mysql_pool_size,
+        mysql_timeout,
+        // Redis parameters
+        redis_host,
+        redis_port,
+        redis_password,
+        redis_db,
+        redis_pool_size,
+        redis_timeout,
+        // SQLite parameters
+        sqlite_path,
+        sqlite_pool_size,
+        sqlite_timeout,
     );
     let mut global = GLOBAL_CONFIG.write().unwrap();
     *global = config;

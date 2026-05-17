@@ -1,4 +1,5 @@
 pub mod common;
+pub mod db;
 pub mod document;
 pub mod file;
 pub mod helloworld;
@@ -8,6 +9,7 @@ pub mod net;
 pub mod system;
 pub mod time;
 
+pub use db::*;
 pub use document::*;
 pub use helloworld::HelloWorldSkill;
 pub use math::*;
