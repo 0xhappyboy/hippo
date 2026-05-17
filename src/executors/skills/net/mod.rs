@@ -1,5 +1,10 @@
-pub(crate) mod http_request;
-pub(crate) mod read_url;
+pub(crate) mod ftp;
+pub(crate) mod http;
+pub(crate) mod tcp;
+pub(crate) mod udp;
+pub(crate) mod url;
 
-pub use http_request::HttpRequestSkill;
-pub use read_url::ReadUrlSkill;
+pub use ftp::*;
+pub use http::*;
+pub use tcp::*;
+pub use url::*;

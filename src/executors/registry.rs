@@ -120,6 +120,45 @@ static SKILL_REGISTRY: Lazy<RwLock<HashMap<String, Arc<dyn Skill>>>> = Lazy::new
         "send-wecom".to_string(),
         Arc::new(super::skills::message::SendWecomSkill) as Arc<dyn Skill>,
     );
+    // ==================== FTP Skills ====================
+    registry.insert(
+        "ftp-upload".to_string(),
+        Arc::new(super::skills::ftp::FtpUploadSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "ftp-download".to_string(),
+        Arc::new(super::skills::ftp::FtpDownloadSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "ftp-list".to_string(),
+        Arc::new(super::skills::ftp::FtpListSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "ftp-delete".to_string(),
+        Arc::new(super::skills::ftp::FtpDeleteSkill) as Arc<dyn Skill>,
+    );
+    // ==================== TCP Skills ====================
+    registry.insert(
+        "tcp-send".to_string(),
+        Arc::new(super::skills::tcp::TcpSendSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "tcp-receive".to_string(),
+        Arc::new(super::skills::tcp::TcpReceiveSkill) as Arc<dyn Skill>,
+    );
+    // ==================== UDP Skills ====================
+    registry.insert(
+        "udp-send".to_string(),
+        Arc::new(super::skills::udp::UdpSendSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "udp-receive".to_string(),
+        Arc::new(super::skills::udp::UdpReceiveSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "udp-broadcast".to_string(),
+        Arc::new(super::skills::udp::UdpBroadcastSkill) as Arc<dyn Skill>,
+    );
     RwLock::new(registry)
 });
 

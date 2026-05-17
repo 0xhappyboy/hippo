@@ -3,6 +3,10 @@ use std::sync::RwLock;
 
 use crate::envs;
 
+/// Global static configuration instance
+pub static GLOBAL_CONFIG: Lazy<RwLock<HippoxConfig>> =
+    Lazy::new(|| RwLock::new(HippoxConfig::default()));
+
 /// Hippox global configuration
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct HippoxConfig {
@@ -29,6 +33,25 @@ pub struct HippoxConfig {
     pub feishu_webhook: String,
     // WeCom settings
     pub wecom_webhook: String,
+    // ==================== FTP Settings ====================
+    pub ftp_host: String,
+    pub ftp_port: u16,
+    pub ftp_username: String,
+    pub ftp_password: String,
+    pub ftp_remote_dir: String,
+    pub ftp_timeout: u64,
+    pub ftp_mode: String,
+    // ==================== TCP Settings ====================
+    pub tcp_host: String,
+    pub tcp_port: u16,
+    pub tcp_timeout: u64,
+    pub tcp_encoding: String,
+    // ==================== UDP Settings ====================
+    pub udp_host: String,
+    pub udp_port: u16,
+    pub udp_timeout: u64,
+    pub udp_encoding: String,
+    pub udp_broadcast: bool,
 }
 
 impl Default for HippoxConfig {
@@ -50,6 +73,25 @@ impl Default for HippoxConfig {
             dingding_access_token: String::new(),
             feishu_webhook: String::new(),
             wecom_webhook: String::new(),
+            // FTP defaults
+            ftp_host: String::new(),
+            ftp_port: 21,
+            ftp_username: "anonymous".to_string(),
+            ftp_password: String::new(),
+            ftp_remote_dir: "/".to_string(),
+            ftp_timeout: 30,
+            ftp_mode: "binary".to_string(),
+            // TCP defaults
+            tcp_host: "127.0.0.1".to_string(),
+            tcp_port: 8888,
+            tcp_timeout: 30,
+            tcp_encoding: "utf8".to_string(),
+            // UDP defaults
+            udp_host: "127.0.0.1".to_string(),
+            udp_port: 9999,
+            udp_timeout: 30,
+            udp_encoding: "utf8".to_string(),
+            udp_broadcast: false,
         }
     }
 }
@@ -76,6 +118,37 @@ impl HippoxConfig {
             dingding_access_token: envs::get_env_or(envs::HIPPOX_DINGDING_ACCESS_TOKEN, ""),
             feishu_webhook: envs::get_env_or(envs::HIPPOX_FEISHU_WEBHOOK, ""),
             wecom_webhook: envs::get_env_or(envs::HIPPOX_WECOM_WEBHOOK, ""),
+            // FTP
+            ftp_host: envs::get_env_or(envs::HIPPOX_FTP_HOST, ""),
+            ftp_port: envs::get_env_or(envs::HIPPOX_FTP_PORT, "21")
+                .parse()
+                .unwrap_or(21),
+            ftp_username: envs::get_env_or(envs::HIPPOX_FTP_USERNAME, "anonymous"),
+            ftp_password: envs::get_env_or(envs::HIPPOX_FTP_PASSWORD, ""),
+            ftp_remote_dir: envs::get_env_or(envs::HIPPOX_FTP_REMOTE_DIR, "/"),
+            ftp_timeout: envs::get_env_or(envs::HIPPOX_FTP_TIMEOUT, "30")
+                .parse()
+                .unwrap_or(30),
+            ftp_mode: envs::get_env_or(envs::HIPPOX_FTP_MODE, "binary"),
+            // TCP
+            tcp_host: envs::get_env_or(envs::HIPPOX_TCP_HOST, "127.0.0.1"),
+            tcp_port: envs::get_env_or(envs::HIPPOX_TCP_PORT, "8888")
+                .parse()
+                .unwrap_or(8888),
+            tcp_timeout: envs::get_env_or(envs::HIPPOX_TCP_TIMEOUT, "30")
+                .parse()
+                .unwrap_or(30),
+            tcp_encoding: envs::get_env_or(envs::HIPPOX_TCP_ENCODING, "utf8"),
+            // UDP
+            udp_host: envs::get_env_or(envs::HIPPOX_UDP_HOST, "127.0.0.1"),
+            udp_port: envs::get_env_or(envs::HIPPOX_UDP_PORT, "9999")
+                .parse()
+                .unwrap_or(9999),
+            udp_timeout: envs::get_env_or(envs::HIPPOX_UDP_TIMEOUT, "30")
+                .parse()
+                .unwrap_or(30),
+            udp_encoding: envs::get_env_or(envs::HIPPOX_UDP_ENCODING, "utf8"),
+            udp_broadcast: envs::is_env_true(envs::HIPPOX_UDP_BROADCAST),
         }
     }
 
@@ -112,6 +185,25 @@ impl HippoxConfig {
         dingding_access_token: Option<String>,
         feishu_webhook: Option<String>,
         wecom_webhook: Option<String>,
+        // FTP parameters
+        ftp_host: Option<String>,
+        ftp_port: Option<u16>,
+        ftp_username: Option<String>,
+        ftp_password: Option<String>,
+        ftp_remote_dir: Option<String>,
+        ftp_timeout: Option<u64>,
+        ftp_mode: Option<String>,
+        // TCP parameters
+        tcp_host: Option<String>,
+        tcp_port: Option<u16>,
+        tcp_timeout: Option<u64>,
+        tcp_encoding: Option<String>,
+        // UDP parameters
+        udp_host: Option<String>,
+        udp_port: Option<u16>,
+        udp_timeout: Option<u64>,
+        udp_encoding: Option<String>,
+        udp_broadcast: Option<bool>,
     ) -> Self {
         let mut config = Self::load_from_env();
         if let Some(v) = lang {
@@ -161,6 +253,57 @@ impl HippoxConfig {
         }
         if let Some(v) = wecom_webhook {
             config.wecom_webhook = v;
+        }
+        // FTP
+        if let Some(v) = ftp_host {
+            config.ftp_host = v;
+        }
+        if let Some(v) = ftp_port {
+            config.ftp_port = v;
+        }
+        if let Some(v) = ftp_username {
+            config.ftp_username = v;
+        }
+        if let Some(v) = ftp_password {
+            config.ftp_password = v;
+        }
+        if let Some(v) = ftp_remote_dir {
+            config.ftp_remote_dir = v;
+        }
+        if let Some(v) = ftp_timeout {
+            config.ftp_timeout = v;
+        }
+        if let Some(v) = ftp_mode {
+            config.ftp_mode = v;
+        }
+        // TCP
+        if let Some(v) = tcp_host {
+            config.tcp_host = v;
+        }
+        if let Some(v) = tcp_port {
+            config.tcp_port = v;
+        }
+        if let Some(v) = tcp_timeout {
+            config.tcp_timeout = v;
+        }
+        if let Some(v) = tcp_encoding {
+            config.tcp_encoding = v;
+        }
+        // UDP
+        if let Some(v) = udp_host {
+            config.udp_host = v;
+        }
+        if let Some(v) = udp_port {
+            config.udp_port = v;
+        }
+        if let Some(v) = udp_timeout {
+            config.udp_timeout = v;
+        }
+        if let Some(v) = udp_encoding {
+            config.udp_encoding = v;
+        }
+        if let Some(v) = udp_broadcast {
+            config.udp_broadcast = v;
         }
         config
     }
@@ -221,6 +364,57 @@ impl HippoxConfig {
         if let Some(v) = overrides.get("wecom_webhook").and_then(|x| x.as_str()) {
             config.wecom_webhook = v.to_string();
         }
+        // FTP
+        if let Some(v) = overrides.get("ftp_host").and_then(|x| x.as_str()) {
+            config.ftp_host = v.to_string();
+        }
+        if let Some(v) = overrides.get("ftp_port").and_then(|x| x.as_u64()) {
+            config.ftp_port = v as u16;
+        }
+        if let Some(v) = overrides.get("ftp_username").and_then(|x| x.as_str()) {
+            config.ftp_username = v.to_string();
+        }
+        if let Some(v) = overrides.get("ftp_password").and_then(|x| x.as_str()) {
+            config.ftp_password = v.to_string();
+        }
+        if let Some(v) = overrides.get("ftp_remote_dir").and_then(|x| x.as_str()) {
+            config.ftp_remote_dir = v.to_string();
+        }
+        if let Some(v) = overrides.get("ftp_timeout").and_then(|x| x.as_u64()) {
+            config.ftp_timeout = v;
+        }
+        if let Some(v) = overrides.get("ftp_mode").and_then(|x| x.as_str()) {
+            config.ftp_mode = v.to_string();
+        }
+        // TCP
+        if let Some(v) = overrides.get("tcp_host").and_then(|x| x.as_str()) {
+            config.tcp_host = v.to_string();
+        }
+        if let Some(v) = overrides.get("tcp_port").and_then(|x| x.as_u64()) {
+            config.tcp_port = v as u16;
+        }
+        if let Some(v) = overrides.get("tcp_timeout").and_then(|x| x.as_u64()) {
+            config.tcp_timeout = v;
+        }
+        if let Some(v) = overrides.get("tcp_encoding").and_then(|x| x.as_str()) {
+            config.tcp_encoding = v.to_string();
+        }
+        // UDP
+        if let Some(v) = overrides.get("udp_host").and_then(|x| x.as_str()) {
+            config.udp_host = v.to_string();
+        }
+        if let Some(v) = overrides.get("udp_port").and_then(|x| x.as_u64()) {
+            config.udp_port = v as u16;
+        }
+        if let Some(v) = overrides.get("udp_timeout").and_then(|x| x.as_u64()) {
+            config.udp_timeout = v;
+        }
+        if let Some(v) = overrides.get("udp_encoding").and_then(|x| x.as_str()) {
+            config.udp_encoding = v.to_string();
+        }
+        if let Some(v) = overrides.get("udp_broadcast").and_then(|x| x.as_bool()) {
+            config.udp_broadcast = v;
+        }
         Ok(config)
     }
 
@@ -251,11 +445,22 @@ impl HippoxConfig {
     pub fn is_wecom_configured(&self) -> bool {
         !self.wecom_webhook.is_empty()
     }
-}
 
-/// Global static configuration instance
-pub static GLOBAL_CONFIG: Lazy<RwLock<HippoxConfig>> =
-    Lazy::new(|| RwLock::new(HippoxConfig::default()));
+    /// Check if FTP is configured
+    pub fn is_ftp_configured(&self) -> bool {
+        !self.ftp_host.is_empty()
+    }
+
+    /// Check if TCP is configured
+    pub fn is_tcp_configured(&self) -> bool {
+        self.tcp_port > 0
+    }
+
+    /// Check if UDP is configured
+    pub fn is_udp_configured(&self) -> bool {
+        self.udp_port > 0
+    }
+}
 
 /// init global configuration from environment variables
 pub fn init_config_from_env() {
@@ -299,6 +504,25 @@ pub fn init_config_from_params(
     dingding_access_token: Option<String>,
     feishu_webhook: Option<String>,
     wecom_webhook: Option<String>,
+    // FTP parameters
+    ftp_host: Option<String>,
+    ftp_port: Option<u16>,
+    ftp_username: Option<String>,
+    ftp_password: Option<String>,
+    ftp_remote_dir: Option<String>,
+    ftp_timeout: Option<u64>,
+    ftp_mode: Option<String>,
+    // TCP parameters
+    tcp_host: Option<String>,
+    tcp_port: Option<u16>,
+    tcp_timeout: Option<u64>,
+    tcp_encoding: Option<String>,
+    // UDP parameters
+    udp_host: Option<String>,
+    udp_port: Option<u16>,
+    udp_timeout: Option<u64>,
+    udp_encoding: Option<String>,
+    udp_broadcast: Option<bool>,
 ) {
     let config = HippoxConfig::load_from_params(
         lang,
@@ -317,6 +541,22 @@ pub fn init_config_from_params(
         dingding_access_token,
         feishu_webhook,
         wecom_webhook,
+        ftp_host,
+        ftp_port,
+        ftp_username,
+        ftp_password,
+        ftp_remote_dir,
+        ftp_timeout,
+        ftp_mode,
+        tcp_host,
+        tcp_port,
+        tcp_timeout,
+        tcp_encoding,
+        udp_host,
+        udp_port,
+        udp_timeout,
+        udp_encoding,
+        udp_broadcast,
     );
     let mut global = GLOBAL_CONFIG.write().unwrap();
     *global = config;

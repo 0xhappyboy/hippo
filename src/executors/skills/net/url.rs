@@ -113,15 +113,12 @@ impl Skill for ReadUrlSkill {
             .get("raw")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-
         let max_size = parameters
             .get("max_size")
             .and_then(|v| v.as_u64())
             .unwrap_or(1024 * 1024) as usize;
-
         let config = Http::parse_config(parameters)?;
         let response = Http::execute(&config).await?;
-
         if raw {
             if response.body.len() > max_size {
                 Ok(format!(
