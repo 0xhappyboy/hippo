@@ -799,14 +799,14 @@ impl HippoxConfig {
 }
 
 /// init global configuration from environment variables
-pub fn init_config_from_env() {
+pub(crate) fn init_config_from_env() {
     let config = HippoxConfig::load_from_env();
     let mut global = GLOBAL_CONFIG.write().unwrap();
     *global = config;
 }
 
 /// init global configuration from TOML file
-pub fn init_config_from_toml_file(path: &str) -> anyhow::Result<()> {
+pub(crate) fn init_config_from_toml_file(path: &str) -> anyhow::Result<()> {
     let config = HippoxConfig::load_from_toml_file(path)?;
     let mut global = GLOBAL_CONFIG.write().unwrap();
     *global = config;
@@ -814,7 +814,7 @@ pub fn init_config_from_toml_file(path: &str) -> anyhow::Result<()> {
 }
 
 /// init global configuration from JSON file
-pub fn init_config_from_json_file(path: &str) -> anyhow::Result<()> {
+pub(crate) fn init_config_from_json_file(path: &str) -> anyhow::Result<()> {
     let config = HippoxConfig::load_from_json_file(path)?;
     let mut global = GLOBAL_CONFIG.write().unwrap();
     *global = config;
@@ -823,7 +823,7 @@ pub fn init_config_from_json_file(path: &str) -> anyhow::Result<()> {
 
 /// init global configuration from optional parameters
 #[allow(clippy::too_many_arguments)]
-pub fn init_config_from_params(
+pub(crate) fn init_config_from_params(
     lang: Option<String>,
     provider: Option<String>,
     enable_cli: Option<bool>,
@@ -960,7 +960,7 @@ pub fn init_config_from_params(
 }
 
 /// init global configuration from JSON string of optional parameters
-pub fn init_config_from_params_json_str(json_str: &str) -> anyhow::Result<()> {
+pub(crate) fn init_config_from_params_json_str(json_str: &str) -> anyhow::Result<()> {
     let config = HippoxConfig::load_from_params_json_str(json_str)?;
     let mut global = GLOBAL_CONFIG.write().unwrap();
     *global = config;
@@ -970,4 +970,14 @@ pub fn init_config_from_params_json_str(json_str: &str) -> anyhow::Result<()> {
 /// Get a clone of the global configuration
 pub fn get_config() -> HippoxConfig {
     GLOBAL_CONFIG.read().unwrap().clone()
+}
+
+// update config
+pub fn update_config<F>(f: F) -> anyhow::Result<()>
+where
+    F: FnOnce(&mut HippoxConfig),
+{
+    let mut global = GLOBAL_CONFIG.write().unwrap();
+    f(&mut global);
+    Ok(())
 }

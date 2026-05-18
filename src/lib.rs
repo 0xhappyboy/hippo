@@ -9,13 +9,15 @@ mod skill_loader;
 mod skill_scheduler;
 mod types;
 
-pub use config::{GLOBAL_CONFIG, HippoxConfig, get_config, init_config_from_env};
+pub use config::{GLOBAL_CONFIG, HippoxConfig, get_config};
 pub use core::Hippox;
 pub use langhub::types::ModelProvider;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::ConfigInitMethod;
+    use serde_json::json;
     use tempfile::tempdir;
 
     fn create_test_skill_md(dir: &tempfile::TempDir, skill_name: &str, description: &str) {
@@ -43,17 +45,42 @@ Process the request and return a result.
     }
 
     #[tokio::test]
-    async fn test_hippox_new() {
+    async fn test_hippox_new_with_env() {
         let temp_dir = tempdir().unwrap();
         let hippox = Hippox::new(
             temp_dir.path().to_str().unwrap(),
             ModelProvider::OpenAI,
             Some("test-api-key".to_string()),
             None,
-            "en",
+            ConfigInitMethod::Env,
         )
         .await;
         assert!(hippox.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_hippox_new_with_params_json() {
+        let temp_dir = tempdir().unwrap();
+        let config_json = json!({
+            "lang": "zh",
+            "provider": "openai",
+            "enable_cli": false
+        })
+        .to_string();
+        let hippox = Hippox::new(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            ConfigInitMethod::ParamsJsonStr(config_json),
+        )
+        .await;
+        assert!(hippox.is_ok());
+        let hippox = hippox.unwrap();
+        let config = hippox.get_config();
+        assert_eq!(config.lang, "zh");
+        assert_eq!(config.provider, "openai");
+        assert!(!config.enable_cli);
     }
 
     #[tokio::test]
@@ -64,7 +91,7 @@ Process the request and return a result.
             ModelProvider::OpenAI,
             Some("test-api-key".to_string()),
             None,
-            "en",
+            ConfigInitMethod::Env,
         )
         .await
         .unwrap();
@@ -81,7 +108,7 @@ Process the request and return a result.
             ModelProvider::OpenAI,
             Some("test-api-key".to_string()),
             None,
-            "en",
+            ConfigInitMethod::Env,
         )
         .await
         .unwrap();
@@ -97,12 +124,52 @@ Process the request and return a result.
             ModelProvider::OpenAI,
             Some("test-api-key".to_string()),
             None,
-            "en",
+            ConfigInitMethod::Env,
         )
         .await
         .unwrap();
         hippox.clear_conversation("test-session");
         hippox.clear_all_conversations();
+    }
+
+    #[tokio::test]
+    async fn test_update_config() {
+        let temp_dir = tempdir().unwrap();
+        let hippox = Hippox::new(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            ConfigInitMethod::Env,
+        )
+        .await
+        .unwrap();
+        hippox
+            .update_config(|config| {
+                config.lang = "zh".to_string();
+                config.provider = "anthropic".to_string();
+            })
+            .unwrap();
+        let config = hippox.get_config();
+        assert_eq!(config.lang, "zh");
+        assert_eq!(config.provider, "anthropic");
+    }
+
+    #[tokio::test]
+    async fn test_get_config() {
+        let temp_dir = tempdir().unwrap();
+        let hippox = Hippox::new(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            ConfigInitMethod::Env,
+        )
+        .await
+        .unwrap();
+        let config = hippox.get_config();
+        assert_eq!(config.lang, "en");
+        assert_eq!(config.provider, "openai");
     }
 
     #[test]
@@ -127,7 +194,7 @@ Process the request and return a result.
                 ModelProvider::OpenAI,
                 Some("test-api-key".to_string()),
                 None,
-                "en",
+                ConfigInitMethod::Env,
             )
             .await
             .unwrap()
@@ -146,7 +213,7 @@ Process the request and return a result.
                 ModelProvider::OpenAI,
                 Some("test-api-key".to_string()),
                 None,
-                "en",
+                ConfigInitMethod::Env,
             )
             .await
             .unwrap()
@@ -164,7 +231,7 @@ Process the request and return a result.
                 ModelProvider::OpenAI,
                 Some("test-api-key".to_string()),
                 None,
-                "en",
+                ConfigInitMethod::Env,
             )
             .await
             .unwrap()

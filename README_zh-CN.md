@@ -21,33 +21,82 @@
 ## 基础使用
 
 ```rust
-use hippox_core::{Hippox, ModelProvider};
-use serde_json::json;
-use std::collections::HashMap;
+use hippox::{Hippox, ModelProvider, core::ConfigInitMethod};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let hippox = Hippox::new("./skills", ModelProvider::OpenAI, "en").await?;
-    // 自然语言 - 单次处理
-    let response = hippox.handle_natural_language("Calculate 2+3", None).await;
-    println!("Result: {}", response);
-    // 自然语言 - 批量并行处理
-    let inputs = vec![
-        ("What is 10/2?".to_string(), None),
-        ("Tell me a joke".to_string(), Some("session1".to_string())),
-    ];
-    let results = hippox.handle_natural_language_batch(inputs).await;
-    // SKILL.md - 单次执行
-    let mut params = HashMap::new();
-    params.insert("input".to_string(), json!("Hello World"));
-    let result = hippox.handle_skill_md("my_workflow", Some(params)).await;
-    // SKILL.md - 批量并行执行
-    let tasks = vec![
-        ("daily_report".to_string(), None),
-        ("send_email".to_string(), Some(params)),
-    ];
-    let batch_results = hippox.handle_skill_md_batch(tasks).await;
+    // 方式1: 从环境变量加载
+    let hippox = Hippox::new(
+        "./skills",
+        ModelProvider::OpenAI,
+        Some("api-key".to_string()),
+        None,
+        ConfigInitMethod::Env,
+    ).await?;
+    // 方式2: 从 TOML 文件加载
+    let hippox = Hippox::new(
+        "./skills",
+        ModelProvider::OpenAI,
+        Some("api-key".to_string()),
+        None,
+        ConfigInitMethod::TomlFile("config.toml".to_string()),
+    ).await?;
+    // 方式3: 从 JSON 文件加载
+    let hippox = Hippox::new(
+        "./skills",
+        ModelProvider::OpenAI,
+        Some("api-key".to_string()),
+        None,
+        ConfigInitMethod::JsonFile("config.json".to_string()),
+    ).await?;
+    // 方式4: 从 JSON 字符串加载
+    let config_json = r#"{"lang": "zh", "provider": "openai"}"#.to_string();
+    let hippox = Hippox::new(
+        "./skills",
+        ModelProvider::OpenAI,
+        Some("api-key".to_string()),
+        None,
+        ConfigInitMethod::ParamsJsonStr(config_json),
+    ).await?;
+    let response = hippox.handle_natural_language("计算 15 + 27", Some("session-1")).await;
+    println!("{}", response);
     Ok(())
+}
+```
+
+## 配置文件格式
+
+### 环境变量
+
+```bash
+export HIPPOX_LANG=zh
+export HIPPOX_PROVIDER=openai
+export HIPPOX_ENABLE_CLI=true
+export HIPPOX_SMTP_HOST=smtp.gmail.com
+export HIPPOX_SMTP_PORT=587
+```
+
+### TOML 格式 (`config.toml`)
+
+```toml
+lang = "zh"
+provider = "openai"
+enable_cli = true
+
+[smtp]
+host = "smtp.gmail.com"
+port = 587
+```
+
+### JSON 格式 (`config.json`)
+
+```json
+{
+  "lang": "zh",
+  "provider": "openai",
+  "enable_cli": true,
+  "smtp_host": "smtp.gmail.com",
+  "smtp_port": 587
 }
 ```
 

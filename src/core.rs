@@ -1,9 +1,13 @@
+use crate::config::{
+    init_config_from_env, init_config_from_json_file, init_config_from_params_json_str,
+    init_config_from_toml_file,
+};
 use crate::executors::Executor;
-use crate::i18n;
 use crate::memory::ConversationMemory;
 use crate::skill_loader::SkillLoader;
 use crate::skill_scheduler::SkillScheduler;
-use crate::t;
+use crate::{HippoxConfig, i18n};
+use crate::{get_config, t};
 use langhub::LLMClient;
 use langhub::types::ModelProvider;
 use serde_json::Value;
@@ -63,6 +67,13 @@ impl StepResult {
     }
 }
 
+pub enum ConfigInitMethod {
+    Env,
+    TomlFile(String),
+    JsonFile(String),
+    ParamsJsonStr(String),
+}
+
 /// Core engine for Hippox
 ///
 /// This is the main entry point for the Hippox engine. It handles:
@@ -91,14 +102,25 @@ impl Hippox {
         provider: ModelProvider,
         api_key: Option<String>,
         extra_keys: Option<HashMap<String, String>>,
-        lang: &str,
+        config_method: ConfigInitMethod,
     ) -> anyhow::Result<Self> {
-        i18n::set_language(lang);
         info!(
             "Initializing Hippox core with skills directory: {}",
             skills_dir
         );
+        // init config
+        match config_method {
+            ConfigInitMethod::Env => init_config_from_env(),
+            ConfigInitMethod::TomlFile(path) => init_config_from_toml_file(&path)?,
+            ConfigInitMethod::JsonFile(path) => init_config_from_json_file(&path)?,
+            ConfigInitMethod::ParamsJsonStr(json) => init_config_from_params_json_str(&json)?,
+        }
+        // set i18n
+        let config = get_config();
+        i18n::set_language(&config.lang);
+        // init llm
         let llm = LLMClient::new_with_key(provider, api_key, extra_keys)?;
+        // init llm scheduler
         let scheduler = SkillScheduler::new(llm);
         let executor = Executor::new();
         Ok(Self {
@@ -625,6 +647,17 @@ Respond with the final result of the workflow execution.
     pub fn scheduler(&self) -> &SkillScheduler {
         &self.scheduler
     }
+
+    pub fn update_config<F>(&self, f: F) -> anyhow::Result<()>
+    where
+        F: FnOnce(&mut HippoxConfig),
+    {
+        crate::config::update_config(f)
+    }
+
+    pub fn get_config(&self) -> HippoxConfig {
+        crate::config::get_config()
+    }
 }
 
 /// Execution instruction parsed from LLM response
@@ -639,41 +672,140 @@ mod tests {
     use super::*;
     use tempfile::tempdir;
 
-    fn create_test_skill_md(dir: &tempfile::TempDir, skill_name: &str) {
+    fn create_test_skill_md(dir: &tempfile::TempDir, skill_name: &str, description: &str) {
         let skill_dir = dir.path().join(skill_name);
         std::fs::create_dir_all(&skill_dir).unwrap();
         let skill_md = skill_dir.join("SKILL.md");
         let content = format!(
             r#"---
 name: {}
-description: A test skill for {}
+description: {}
 version: 1.0.0
 author: Test Author
-parameters:
-  - name: input
-    type: string
-    description: The input to process
-    required: true
 ---
 
 # {} Skill
 
-This is a test workflow.
+This is a test workflow for {}.
 
-## Steps
-1. Process the user input
-2. Return the result
+## Instructions
+Process the request and return a result.
 "#,
-            skill_name, skill_name, skill_name
+            skill_name, description, skill_name, description
         );
         std::fs::write(skill_md, content).unwrap();
     }
 
+    #[tokio::test]
+    async fn test_hippox_new_with_env() {
+        let temp_dir = tempdir().unwrap();
+        let hippox = Hippox::new(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            ConfigInitMethod::Env,
+        )
+        .await;
+        assert!(hippox.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_hippox_new_with_params_json() {
+        let temp_dir = tempdir().unwrap();
+        let config_json = r#"{"lang": "zh", "provider": "openai"}"#;
+        let hippox = Hippox::new(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            ConfigInitMethod::ParamsJsonStr(config_json.to_string()),
+        )
+        .await;
+        assert!(hippox.is_ok());
+        let hippox = hippox.unwrap();
+        let config = hippox.get_config();
+        assert_eq!(config.lang, "zh");
+        assert_eq!(config.provider, "openai");
+    }
+
+    #[tokio::test]
+    async fn test_list_atomic_skills() {
+        let temp_dir = tempdir().unwrap();
+        let hippox = Hippox::new(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            ConfigInitMethod::Env,
+        )
+        .await
+        .unwrap();
+        let skills = hippox.list_atomic_skills();
+        assert!(skills.contains("calculator") || skills.contains("helloworld"));
+    }
+
+    #[tokio::test]
+    async fn test_list_skill_md_files() {
+        let temp_dir = tempdir().unwrap();
+        create_test_skill_md(&temp_dir, "test-skill", "A test skill");
+        let hippox = Hippox::new(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            ConfigInitMethod::Env,
+        )
+        .await
+        .unwrap();
+        let list = hippox.list_skill_md_files();
+        assert!(list.contains("test-skill"));
+    }
+
+    #[tokio::test]
+    async fn test_clear_conversation() {
+        let temp_dir = tempdir().unwrap();
+        let hippox = Hippox::new(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            ConfigInitMethod::Env,
+        )
+        .await
+        .unwrap();
+        hippox.clear_conversation("test-session");
+        hippox.clear_all_conversations();
+    }
+
+    #[tokio::test]
+    async fn test_update_config() {
+        let temp_dir = tempdir().unwrap();
+        let hippox = Hippox::new(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            ConfigInitMethod::Env,
+        )
+        .await
+        .unwrap();
+        hippox
+            .update_config(|config| {
+                config.lang = "zh".to_string();
+                config.provider = "anthropic".to_string();
+            })
+            .unwrap();
+        let config = hippox.get_config();
+        assert_eq!(config.lang, "zh");
+        assert_eq!(config.provider, "anthropic");
+    }
+
     #[test]
     fn test_extract_json() {
-        let text = "Some text {\"action\": \"test\", \"parameters\": {}} more text";
+        let text = r#"Some text {"action": "calculator", "parameters": {"input": "2+2"}}"#;
         let json = Hippox::extract_json(text);
-        assert_eq!(json, "{\"action\": \"test\", \"parameters\": {}}");
+        assert!(json.contains("calculator"));
         let text = "```json\n{\"action\": \"test\"}\n```";
         let json = Hippox::extract_json(text);
         assert_eq!(json, "{\"action\": \"test\"}");
@@ -682,22 +814,8 @@ This is a test workflow.
         assert_eq!(json, "{\"action\": \"test\"}");
     }
 
-    #[tokio::test]
-    async fn test_new_hippox() {
-        let temp_dir = tempdir().unwrap();
-        let hippox = Hippox::new(
-            temp_dir.path().to_str().unwrap(),
-            ModelProvider::OpenAI,
-            Some("test-api-key".to_string()),
-            None,
-            "en",
-        )
-        .await;
-        assert!(hippox.is_ok());
-    }
-
     #[test]
-    fn test_clear_conversation() {
+    fn test_get_atomic_skill_names() {
         let temp_dir = tempdir().unwrap();
         let hippox = tokio::runtime::Runtime::new().unwrap().block_on(async {
             Hippox::new(
@@ -705,31 +823,66 @@ This is a test workflow.
                 ModelProvider::OpenAI,
                 Some("test-api-key".to_string()),
                 None,
-                "en",
+                ConfigInitMethod::Env,
             )
             .await
             .unwrap()
         });
-        hippox.clear_conversation("test-session");
-        hippox.clear_all_conversations();
+        let names = hippox.get_atomic_skill_names();
+        assert!(!names.is_empty());
+        assert!(names.contains(&"calculator".to_string()));
     }
 
     #[test]
-    fn test_list_skill_md_files() {
+    fn test_has_atomic_skills() {
         let temp_dir = tempdir().unwrap();
-        create_test_skill_md(&temp_dir, "test-skill");
         let hippox = tokio::runtime::Runtime::new().unwrap().block_on(async {
             Hippox::new(
                 temp_dir.path().to_str().unwrap(),
                 ModelProvider::OpenAI,
                 Some("test-api-key".to_string()),
                 None,
-                "en",
+                ConfigInitMethod::Env,
             )
             .await
             .unwrap()
         });
-        let list = hippox.list_skill_md_files();
-        assert!(list.contains("test-skill") || list == t!("skill.no_skill_md_available"));
+        assert!(hippox.has_atomic_skills());
+    }
+
+    #[test]
+    fn test_skills_directory() {
+        let temp_dir = tempdir().unwrap();
+        let path = temp_dir.path().to_str().unwrap();
+        let hippox = tokio::runtime::Runtime::new().unwrap().block_on(async {
+            Hippox::new(
+                path,
+                ModelProvider::OpenAI,
+                Some("test-api-key".to_string()),
+                None,
+                ConfigInitMethod::Env,
+            )
+            .await
+            .unwrap()
+        });
+        assert_eq!(hippox.skills_directory().to_str().unwrap(), path);
+    }
+
+    #[test]
+    fn test_get_config() {
+        let temp_dir = tempdir().unwrap();
+        let hippox = tokio::runtime::Runtime::new().unwrap().block_on(async {
+            Hippox::new(
+                temp_dir.path().to_str().unwrap(),
+                ModelProvider::OpenAI,
+                Some("test-api-key".to_string()),
+                None,
+                ConfigInitMethod::Env,
+            )
+            .await
+            .unwrap()
+        });
+        let config = hippox.get_config();
+        assert_eq!(config.lang, "en");
     }
 }

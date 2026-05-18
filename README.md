@@ -21,33 +21,82 @@ A skill-driven AI agent engine that automatically loads and executes skills simp
 ## Basic Usage
 
 ```rust
-use hippox_core::{Hippox, ModelProvider};
-use serde_json::json;
-use std::collections::HashMap;
+use hippox::{Hippox, ModelProvider, core::ConfigInitMethod};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let hippox = Hippox::new("./skills", ModelProvider::OpenAI, "en").await?;
-    // Natural language - single processing
-    let response = hippox.handle_natural_language("Calculate 2+3", None).await;
-    println!("Result: {}", response);
-    // Natural language - batch parallel processing
-    let inputs = vec![
-        ("What is 10/2?".to_string(), None),
-        ("Tell me a joke".to_string(), Some("session1".to_string())),
-    ];
-    let results = hippox.handle_natural_language_batch(inputs).await;
-    // SKILL.md - single execution
-    let mut params = HashMap::new();
-    params.insert("input".to_string(), json!("Hello World"));
-    let result = hippox.handle_skill_md("my_workflow", Some(params)).await;
-    // SKILL.md - batch parallel execution
-    let tasks = vec![
-        ("daily_report".to_string(), None),
-        ("send_email".to_string(), Some(params)),
-    ];
-    let batch_results = hippox.handle_skill_md_batch(tasks).await;
+    // Load from environment variables
+    let hippox = Hippox::new(
+        "./skills",
+        ModelProvider::OpenAI,
+        Some("api-key".to_string()),
+        None,
+        ConfigInitMethod::Env,
+    ).await?;
+    // Load from TOML file
+    let hippox = Hippox::new(
+        "./skills",
+        ModelProvider::OpenAI,
+        Some("api-key".to_string()),
+        None,
+        ConfigInitMethod::TomlFile("config.toml".to_string()),
+    ).await?;
+    // Load from JSON file
+    let hippox = Hippox::new(
+        "./skills",
+        ModelProvider::OpenAI,
+        Some("api-key".to_string()),
+        None,
+        ConfigInitMethod::JsonFile("config.json".to_string()),
+    ).await?;
+    // Load from JSON string
+    let config_json = r#"{"lang": "en", "provider": "openai"}"#.to_string();
+    let hippox = Hippox::new(
+        "./skills",
+        ModelProvider::OpenAI,
+        Some("api-key".to_string()),
+        None,
+        ConfigInitMethod::ParamsJsonStr(config_json),
+    ).await?;
+    let response = hippox.handle_natural_language("What is 15 + 27?", Some("session-1")).await;
+    println!("{}", response);
     Ok(())
+}
+```
+
+## Configuration File Formats
+
+### Environment Variables
+
+```bash
+export HIPPOX_LANG=en
+export HIPPOX_PROVIDER=openai
+export HIPPOX_ENABLE_CLI=true
+export HIPPOX_SMTP_HOST=smtp.gmail.com
+export HIPPOX_SMTP_PORT=587
+```
+
+### TOML Format (`config.toml`)
+
+```toml
+lang = "en"
+provider = "openai"
+enable_cli = true
+
+[smtp]
+host = "smtp.gmail.com"
+port = 587
+```
+
+### JSON Format (`config.json`)
+
+```json
+{
+  "lang": "en",
+  "provider": "openai",
+  "enable_cli": true,
+  "smtp_host": "smtp.gmail.com",
+  "smtp_port": 587
 }
 ```
 
