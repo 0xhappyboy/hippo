@@ -10,7 +10,7 @@ repository = "https://github.com/0xhappyboy/hippox"
 keywords = ["ai", "agent", "llm", "skills", "skills-orchestration"]
 
 [dependencies]
-langhub = "0.2.2"
+langhub = "0.2.5"
 axum = { version = "0.7", features = ["ws"] }
 futures-util = "0.3"
 tokio = { version = "1", features = ["full"] }

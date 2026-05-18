@@ -48,6 +48,8 @@ Process the request and return a result.
         let hippox = Hippox::new(
             temp_dir.path().to_str().unwrap(),
             ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
             "en",
         )
         .await;
@@ -60,6 +62,8 @@ Process the request and return a result.
         let hippox = Hippox::new(
             temp_dir.path().to_str().unwrap(),
             ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
             "en",
         )
         .await
@@ -75,6 +79,8 @@ Process the request and return a result.
         let hippox = Hippox::new(
             temp_dir.path().to_str().unwrap(),
             ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
             "en",
         )
         .await
@@ -89,6 +95,8 @@ Process the request and return a result.
         let hippox = Hippox::new(
             temp_dir.path().to_str().unwrap(),
             ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
             "en",
         )
         .await
@@ -105,6 +113,9 @@ Process the request and return a result.
         let text = "```json\n{\"action\": \"test\"}\n```";
         let json = Hippox::extract_json(text);
         assert_eq!(json, "{\"action\": \"test\"}");
+        let text = "```\n{\"action\": \"test\"}\n```";
+        let json = Hippox::extract_json(text);
+        assert_eq!(json, "{\"action\": \"test\"}");
     }
 
     #[test]
@@ -114,6 +125,8 @@ Process the request and return a result.
             Hippox::new(
                 temp_dir.path().to_str().unwrap(),
                 ModelProvider::OpenAI,
+                Some("test-api-key".to_string()),
+                None,
                 "en",
             )
             .await
@@ -131,6 +144,8 @@ Process the request and return a result.
             Hippox::new(
                 temp_dir.path().to_str().unwrap(),
                 ModelProvider::OpenAI,
+                Some("test-api-key".to_string()),
+                None,
                 "en",
             )
             .await
@@ -144,9 +159,15 @@ Process the request and return a result.
         let temp_dir = tempdir().unwrap();
         let path = temp_dir.path().to_str().unwrap();
         let hippox = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            Hippox::new(path, ModelProvider::OpenAI, "en")
-                .await
-                .unwrap()
+            Hippox::new(
+                path,
+                ModelProvider::OpenAI,
+                Some("test-api-key".to_string()),
+                None,
+                "en",
+            )
+            .await
+            .unwrap()
         });
         assert_eq!(hippox.skills_directory().to_str().unwrap(), path);
     }

@@ -273,7 +273,12 @@ mod skill_scheduler_test {
 
     /// Create a test scheduler with OpenAI provider
     fn create_test_scheduler() -> SkillScheduler {
-        let llm = LLMClient::new(ModelProvider::OpenAI).unwrap();
+        let llm = LLMClient::new_with_key(
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+        )
+        .unwrap();
         SkillScheduler::new(llm)
     }
 

@@ -83,10 +83,14 @@ impl Hippox {
     /// # Arguments
     /// * `skills_dir` - Path to the directory containing SKILL.md subdirectories
     /// * `provider` - LLM provider to use (OpenAI, etc.)
+    /// * `api_key` - API key for the LLM provider
+    /// * `extra_keys` - Optional additional keys for providers that need them (e.g., secret_key, endpoint)
     /// * `lang` - Language for i18n
     pub async fn new(
         skills_dir: &str,
         provider: ModelProvider,
+        api_key: Option<String>,
+        extra_keys: Option<HashMap<String, String>>,
         lang: &str,
     ) -> anyhow::Result<Self> {
         i18n::set_language(lang);
@@ -94,7 +98,7 @@ impl Hippox {
             "Initializing Hippox core with skills directory: {}",
             skills_dir
         );
-        let llm = LLMClient::new(provider)?;
+        let llm = LLMClient::new_with_key(provider, api_key, extra_keys)?;
         let scheduler = SkillScheduler::new(llm);
         let executor = Executor::new();
         Ok(Self {
@@ -665,18 +669,6 @@ This is a test workflow.
         std::fs::write(skill_md, content).unwrap();
     }
 
-    #[tokio::test]
-    async fn test_new_hippox() {
-        let temp_dir = tempdir().unwrap();
-        let hippox = Hippox::new(
-            temp_dir.path().to_str().unwrap(),
-            ModelProvider::OpenAI,
-            "en",
-        )
-        .await;
-        assert!(hippox.is_ok());
-    }
-
     #[test]
     fn test_extract_json() {
         let text = "Some text {\"action\": \"test\", \"parameters\": {}} more text";
@@ -690,6 +682,20 @@ This is a test workflow.
         assert_eq!(json, "{\"action\": \"test\"}");
     }
 
+    #[tokio::test]
+    async fn test_new_hippox() {
+        let temp_dir = tempdir().unwrap();
+        let hippox = Hippox::new(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            "en",
+        )
+        .await;
+        assert!(hippox.is_ok());
+    }
+
     #[test]
     fn test_clear_conversation() {
         let temp_dir = tempdir().unwrap();
@@ -697,6 +703,8 @@ This is a test workflow.
             Hippox::new(
                 temp_dir.path().to_str().unwrap(),
                 ModelProvider::OpenAI,
+                Some("test-api-key".to_string()),
+                None,
                 "en",
             )
             .await
@@ -714,6 +722,8 @@ This is a test workflow.
             Hippox::new(
                 temp_dir.path().to_str().unwrap(),
                 ModelProvider::OpenAI,
+                Some("test-api-key".to_string()),
+                None,
                 "en",
             )
             .await
