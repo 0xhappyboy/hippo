@@ -2,10 +2,7 @@ use anyhow::Result;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 
-use crate::executors::{
-    skills::common,
-    types::{Skill, SkillParameter},
-};
+use crate::executors::{ensure_dir, file_exists, read_file_content, types::{Skill, SkillParameter}, validate_path, write_file_content};
 
 #[derive(Debug)]
 pub struct MarkdownReadSkill;
@@ -73,11 +70,11 @@ impl Skill for MarkdownReadSkill {
             .get("extract_frontmatter")
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
-        let validated_path = common::File::validate_path(path, None)?;
-        if !common::File::file_exists(&validated_path.to_string_lossy()) {
+        let validated_path = validate_path(path, None)?;
+        if !file_exists(&validated_path.to_string_lossy()) {
             anyhow::bail!("Markdown file not found: {}", path);
         }
-        let content = common::File::read_file_content(&validated_path.to_string_lossy())?;
+        let content = read_file_content(&validated_path.to_string_lossy())?;
         if extract_frontmatter && content.starts_with("---") {
             let parts: Vec<&str> = content.splitn(3, "---").collect();
             if parts.len() >= 3 {
@@ -183,25 +180,21 @@ impl Skill for MarkdownWriteSkill {
             .get("append")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        let validated_path = common::File::validate_path(path, None)?;
+        let validated_path = validate_path(path, None)?;
         if let Some(parent) = validated_path.parent() {
-            common::File::ensure_dir(&parent.to_string_lossy())?;
+            ensure_dir(&parent.to_string_lossy())?;
         }
         if append {
-            let existing = if common::File::file_exists(&validated_path.to_string_lossy()) {
-                common::File::read_file_content(&validated_path.to_string_lossy())?
+            let existing = if file_exists(&validated_path.to_string_lossy()) {
+                read_file_content(&validated_path.to_string_lossy())?
             } else {
                 String::new()
             };
             let new_content = format!("{}\n\n{}", existing, content);
-            common::File::write_file_content(
-                &validated_path.to_string_lossy(),
-                &new_content,
-                false,
-            )?;
+            write_file_content(&validated_path.to_string_lossy(), &new_content, false)?;
             Ok(format!("Content appended to Markdown file: {}", path))
         } else {
-            common::File::write_file_content(&validated_path.to_string_lossy(), content, false)?;
+            write_file_content(&validated_path.to_string_lossy(), content, false)?;
             Ok(format!("Markdown written to: {}", path))
         }
     }

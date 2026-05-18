@@ -3,8 +3,8 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 
 use crate::executors::{
-    skills::common,
     types::{Skill, SkillParameter},
+    {format_number, validate_number},
 };
 
 #[derive(Debug)]
@@ -76,7 +76,7 @@ impl Skill for CalculatorSkill {
             .get("precision")
             .and_then(|v| v.as_u64())
             .unwrap_or(2);
-        Ok(common::Math::format_number(result, precision as usize))
+        Ok(format_number(result, precision as usize))
     }
 
     fn validate(&self, parameters: &HashMap<String, Value>) -> Result<()> {
@@ -160,22 +160,22 @@ fn evaluate_term(term: &str) -> Result<f64> {
     if start < term.len() {
         factors.push(&term[start..]);
     }
-    let mut result = common::Math::validate_number(factors[0])?;
+    let mut result = validate_number(factors[0])?;
     let mut op_index = 0;
     for i in 0..chars.len() {
         if chars[i] == '*' {
-            let next = common::Math::validate_number(factors[op_index + 1])?;
+            let next = validate_number(factors[op_index + 1])?;
             result *= next;
             op_index += 1;
         } else if chars[i] == '/' {
-            let next = common::Math::validate_number(factors[op_index + 1])?;
+            let next = validate_number(factors[op_index + 1])?;
             if next == 0.0 {
                 anyhow::bail!("Division by zero");
             }
             result /= next;
             op_index += 1;
         } else if chars[i] == '%' {
-            let next = common::Math::validate_number(factors[op_index + 1])?;
+            let next = validate_number(factors[op_index + 1])?;
             result %= next;
             op_index += 1;
         }

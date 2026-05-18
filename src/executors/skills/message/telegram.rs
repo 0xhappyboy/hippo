@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::{
     config,
     executors::{
-        skills::common::Http,
+        RequestConfig, execute,
         types::{Skill, SkillParameter},
     },
 };
@@ -121,14 +121,14 @@ impl Skill for SendTelegramSkill {
             "disable_notification".to_string(),
             json!(disable_notification),
         );
-        let http_config = Http::RequestConfig {
+        let http_config = RequestConfig {
             url,
             method: "POST".to_string(),
             headers: Some([("Content-Type".to_string(), "application/json".to_string())].into()),
             body: Some(serde_json::to_string(&body)?),
             timeout_secs: Some(30),
         };
-        let response = Http::execute(&http_config).await?;
+        let response = execute(&http_config).await?;
         if response.is_success {
             Ok(format!(
                 "Telegram message sent successfully to chat {}",

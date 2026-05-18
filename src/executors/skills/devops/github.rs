@@ -1,5 +1,5 @@
 use crate::config::get_config;
-use crate::executors::skills::common::Http;
+use crate::executors::{RequestConfig, execute};
 use crate::executors::types::{Skill, SkillParameter};
 use anyhow::Result;
 use serde_json::{Value, json};
@@ -35,14 +35,14 @@ impl GitHubApi {
 
     async fn get(endpoint: &str) -> Result<String> {
         let config = get_config();
-        let req_config = Http::RequestConfig {
+        let req_config = RequestConfig {
             url: Self::build_url(endpoint),
             method: "GET".to_string(),
             headers: Some(Self::build_headers()),
             body: None,
             timeout_secs: Some(config.github_timeout),
         };
-        let response = Http::execute(&req_config).await?;
+        let response = execute(&req_config).await?;
         if response.is_success {
             Ok(response.body)
         } else {
@@ -52,14 +52,14 @@ impl GitHubApi {
 
     async fn post(endpoint: &str, body: &str) -> Result<String> {
         let config = get_config();
-        let req_config = Http::RequestConfig {
+        let req_config = RequestConfig {
             url: Self::build_url(endpoint),
             method: "POST".to_string(),
             headers: Some(Self::build_headers()),
             body: Some(body.to_string()),
             timeout_secs: Some(config.github_timeout),
         };
-        let response = Http::execute(&req_config).await?;
+        let response = execute(&req_config).await?;
         if response.is_success {
             Ok(response.body)
         } else {
@@ -69,14 +69,14 @@ impl GitHubApi {
 
     async fn put(endpoint: &str, body: Option<&str>) -> Result<String> {
         let config = get_config();
-        let req_config = Http::RequestConfig {
+        let req_config = RequestConfig {
             url: Self::build_url(endpoint),
             method: "PUT".to_string(),
             headers: Some(Self::build_headers()),
             body: body.map(|s| s.to_string()),
             timeout_secs: Some(config.github_timeout),
         };
-        let response = Http::execute(&req_config).await?;
+        let response = execute(&req_config).await?;
         if response.is_success {
             Ok(response.body)
         } else {
@@ -86,14 +86,14 @@ impl GitHubApi {
 
     async fn delete(endpoint: &str) -> Result<String> {
         let config = get_config();
-        let req_config = Http::RequestConfig {
+        let req_config = RequestConfig {
             url: Self::build_url(endpoint),
             method: "DELETE".to_string(),
             headers: Some(Self::build_headers()),
             body: None,
             timeout_secs: Some(config.github_timeout),
         };
-        let response = Http::execute(&req_config).await?;
+        let response = execute(&req_config).await?;
         if response.is_success {
             Ok(response.body)
         } else {

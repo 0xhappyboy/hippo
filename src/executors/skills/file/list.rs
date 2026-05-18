@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::fs;
 
 use crate::executors::{
-    skills::common,
     types::{Skill, SkillParameter},
+    validate_path,
 };
 
 #[derive(Debug)]
@@ -87,7 +87,7 @@ impl Skill for ListDirectorySkill {
             .get("detail")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        let validated_path = common::File::validate_path(path, None)?;
+        let validated_path = validate_path(path, None)?;
         if !validated_path.is_dir() {
             anyhow::bail!("Not a directory: {}", path);
         }

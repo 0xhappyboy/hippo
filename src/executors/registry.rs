@@ -351,6 +351,52 @@ static SKILL_REGISTRY: Lazy<RwLock<HashMap<String, Arc<dyn Skill>>>> = Lazy::new
         "random_password".to_string(),
         Arc::new(super::skills::math::RandomPasswordSkill) as Arc<dyn Skill>,
     );
+    // ==================== Archive Skills ====================
+    registry.insert(
+        "archive_zip_create".to_string(),
+        Arc::new(super::skills::file::ArchiveZipCreateSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "archive_zip_extract".to_string(),
+        Arc::new(super::skills::file::ArchiveZipExtractSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "archive_tar_create".to_string(),
+        Arc::new(super::skills::file::ArchiveTarCreateSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "archive_tar_extract".to_string(),
+        Arc::new(super::skills::file::ArchiveTarExtractSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "archive_compress".to_string(),
+        Arc::new(super::skills::file::ArchiveCompressSkill) as Arc<dyn Skill>,
+    );
+    // ==================== Image Processing Skills ====================
+    registry.insert(
+        "image_resize".to_string(),
+        Arc::new(super::skills::image::ImageResizeSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "image_convert".to_string(),
+        Arc::new(super::skills::image::ImageConvertSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "image_info".to_string(),
+        Arc::new(super::skills::image::ImageInfoSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "image_rotate".to_string(),
+        Arc::new(super::skills::image::ImageRotateSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "image_crop".to_string(),
+        Arc::new(super::skills::image::ImageCropSkill) as Arc<dyn Skill>,
+    );
+    registry.insert(
+        "image_compress".to_string(),
+        Arc::new(super::skills::image::ImageCompressSkill) as Arc<dyn Skill>,
+    );
     RwLock::new(registry)
 });
 

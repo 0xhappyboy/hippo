@@ -3,8 +3,9 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 
 use crate::executors::{
-    skills::common,
+    ensure_dir, file_exists, read_file_content,
     types::{Skill, SkillParameter},
+    validate_path, write_file_content,
 };
 
 #[derive(Debug)]
@@ -103,11 +104,11 @@ impl Skill for CsvReadSkill {
             .get("limit")
             .and_then(|v| v.as_u64())
             .unwrap_or(100) as usize;
-        let validated_path = common::File::validate_path(path, None)?;
-        if !common::File::file_exists(&validated_path.to_string_lossy()) {
+        let validated_path = validate_path(path, None)?;
+        if !file_exists(&validated_path.to_string_lossy()) {
             anyhow::bail!("CSV file not found: {}", path);
         }
-        let content = common::File::read_file_content(&validated_path.to_string_lossy())?;
+        let content = read_file_content(&validated_path.to_string_lossy())?;
         let mut reader = csv::ReaderBuilder::new()
             .has_headers(has_header)
             .delimiter(delimiter as u8)
@@ -255,9 +256,9 @@ impl Skill for CsvWriteSkill {
             .chars()
             .next()
             .unwrap_or(',');
-        let validated_path = common::File::validate_path(path, None)?;
+        let validated_path = validate_path(path, None)?;
         if let Some(parent) = validated_path.parent() {
-            common::File::ensure_dir(&parent.to_string_lossy())?;
+            ensure_dir(&parent.to_string_lossy())?;
         }
         let mut csv_content = String::new();
         csv_content.push_str(&headers.join(&delimiter.to_string()));
@@ -273,7 +274,7 @@ impl Skill for CsvWriteSkill {
             csv_content.push_str(&row_str.join(&delimiter.to_string()));
             csv_content.push('\n');
         }
-        common::File::write_file_content(&validated_path.to_string_lossy(), &csv_content, false)?;
+        write_file_content(&validated_path.to_string_lossy(), &csv_content, false)?;
         Ok(format!("CSV written to: {} ({} rows)", path, rows.len()))
     }
 

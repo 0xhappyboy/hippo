@@ -12,8 +12,9 @@ use std::fs;
 use std::io::Read;
 
 use crate::executors::{
-    skills::common,
+    file_exists,
     types::{Skill, SkillParameter},
+    validate_path,
 };
 
 /// Skill for calculating MD5 hash of a string
@@ -343,8 +344,8 @@ impl Skill for HashFileSkill {
             .get("algorithm")
             .and_then(|v| v.as_str())
             .unwrap_or("sha256");
-        let validated_path = common::File::validate_path(path, None)?;
-        if !common::File::file_exists(&validated_path.to_string_lossy()) {
+        let validated_path = validate_path(path, None)?;
+        if !file_exists(&validated_path.to_string_lossy()) {
             anyhow::bail!("File not found: {}", path);
         }
         let mut file = fs::File::open(&validated_path)?;

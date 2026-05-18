@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::{
     config,
     executors::{
-        skills::common::Http,
+        RequestConfig, execute,
         types::{Skill, SkillParameter},
     },
 };
@@ -226,14 +226,14 @@ impl Skill for SendWecomSkill {
                 body.insert("text".to_string(), text_content);
             }
         }
-        let http_config = Http::RequestConfig {
+        let http_config = RequestConfig {
             url: webhook,
             method: "POST".to_string(),
             headers: Some([("Content-Type".to_string(), "application/json".to_string())].into()),
             body: Some(serde_json::to_string(&body)?),
             timeout_secs: Some(30),
         };
-        let response = Http::execute(&http_config).await?;
+        let response = execute(&http_config).await?;
         if response.is_success {
             if let Ok(resp_json) = serde_json::from_str::<Value>(&response.body) {
                 if let Some(errcode) = resp_json.get("errcode").and_then(|v| v.as_i64()) {

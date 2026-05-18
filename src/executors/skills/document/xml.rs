@@ -2,10 +2,7 @@ use anyhow::Result;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 
-use crate::executors::{
-    skills::common,
-    types::{Skill, SkillParameter},
-};
+use crate::executors::{file_exists, read_file_content, types::{Skill, SkillParameter}, validate_path};
 
 #[derive(Debug)]
 pub struct XmlParseSkill;
@@ -85,11 +82,11 @@ impl Skill for XmlParseSkill {
             .unwrap_or(false);
         let xpath = parameters.get("xpath").and_then(|v| v.as_str());
         let xml_content = if is_path {
-            let validated_path = common::File::validate_path(source, None)?;
-            if !common::File::file_exists(&validated_path.to_string_lossy()) {
+            let validated_path = validate_path(source, None)?;
+            if !file_exists(&validated_path.to_string_lossy()) {
                 anyhow::bail!("XML file not found: {}", source);
             }
-            common::File::read_file_content(&validated_path.to_string_lossy())?
+            read_file_content(&validated_path.to_string_lossy())?
         } else {
             source.to_string()
         };
@@ -187,11 +184,11 @@ impl Skill for XmlToJsonSkill {
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
         let xml_content = if is_path {
-            let validated_path = common::File::validate_path(source, None)?;
-            if !common::File::file_exists(&validated_path.to_string_lossy()) {
+            let validated_path = validate_path(source, None)?;
+            if !file_exists(&validated_path.to_string_lossy()) {
                 anyhow::bail!("XML file not found: {}", source);
             }
-            common::File::read_file_content(&validated_path.to_string_lossy())?
+            read_file_content(&validated_path.to_string_lossy())?
         } else {
             source.to_string()
         };

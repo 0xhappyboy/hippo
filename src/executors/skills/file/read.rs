@@ -3,8 +3,9 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 
 use crate::executors::{
-    skills::common,
+    file_exists, read_file_content,
     types::{Skill, SkillParameter},
+    validate_path,
 };
 
 #[derive(Debug)]
@@ -69,11 +70,11 @@ impl Skill for ReadFileSkill {
             .get("path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'path' parameter"))?;
-        let validated_path = common::File::validate_path(path, None)?;
-        if !common::File::file_exists(&validated_path.to_string_lossy()) {
+        let validated_path = validate_path(path, None)?;
+        if !file_exists(&validated_path.to_string_lossy()) {
             anyhow::bail!("File not found: {}", path);
         }
-        let content = common::File::read_file_content(&validated_path.to_string_lossy())?;
+        let content = read_file_content(&validated_path.to_string_lossy())?;
         let max_size = parameters
             .get("max_size")
             .and_then(|v| v.as_u64())

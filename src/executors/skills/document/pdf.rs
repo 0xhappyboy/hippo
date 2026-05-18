@@ -11,8 +11,9 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 
 use crate::executors::{
-    skills::common,
+    ensure_dir, file_exists,
     types::{Skill, SkillParameter},
+    validate_path,
 };
 
 /// Skill for reading and extracting text content from PDF files
@@ -115,8 +116,8 @@ impl Skill for PdfReadSkill {
             .get("end_page")
             .and_then(|v| v.as_u64())
             .map(|v| v as usize);
-        let validated_path = common::File::validate_path(path, None)?;
-        if !common::File::file_exists(&validated_path.to_string_lossy()) {
+        let validated_path = validate_path(path, None)?;
+        if !file_exists(&validated_path.to_string_lossy()) {
             anyhow::bail!("PDF file not found: {}", path);
         }
         use pdf_extract::extract_text;
@@ -246,9 +247,9 @@ impl Skill for PdfMergeSkill {
         if inputs.is_empty() {
             anyhow::bail!("At least one input file is required");
         }
-        let validated_output = common::File::validate_path(output, None)?;
+        let validated_output = validate_path(output, None)?;
         if let Some(parent) = validated_output.parent() {
-            common::File::ensure_dir(&parent.to_string_lossy())?;
+            ensure_dir(&parent.to_string_lossy())?;
         }
         let mut merged_doc = Document::new();
         let mut total_pages = 0;
@@ -257,7 +258,7 @@ impl Skill for PdfMergeSkill {
             let path = input_path
                 .as_str()
                 .ok_or_else(|| anyhow::anyhow!("Input path must be a string"))?;
-            let validated_input = common::File::validate_path(path, None)?;
+            let validated_input = validate_path(path, None)?;
             let doc = Document::load(&validated_input)
                 .map_err(|e| anyhow::anyhow!("Failed to load PDF '{}': {}", path, e))?;
             // get pages
@@ -376,7 +377,7 @@ impl Skill for PdfInfoSkill {
             .get("path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'path' parameter"))?;
-        let validated_path = common::File::validate_path(path, None)?;
+        let validated_path = validate_path(path, None)?;
         let doc = Document::load(&validated_path)
             .map_err(|e| anyhow::anyhow!("Failed to load PDF: {}", e))?;
         let pages = doc.page_iter().count();

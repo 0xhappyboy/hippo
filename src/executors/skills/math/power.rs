@@ -3,8 +3,9 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 
 use crate::executors::{
-    skills::common,
+    format_number,
     types::{Skill, SkillParameter},
+    validate_number,
 };
 
 #[derive(Debug)]
@@ -96,7 +97,7 @@ impl Skill for PowerSkill {
 
     async fn execute(&self, parameters: &HashMap<String, Value>) -> Result<String> {
         if let Some(value) = parameters.get("sqrt").and_then(|v| v.as_str()) {
-            let num = common::Math::validate_number(value)?;
+            let num = validate_number(value)?;
             if num < 0.0 {
                 anyhow::bail!("Cannot calculate square root of negative number: {}", num);
             }
@@ -104,7 +105,7 @@ impl Skill for PowerSkill {
             return Ok(format!("√{} = {}", num, result));
         }
         if let Some(value) = parameters.get("cbrt").and_then(|v| v.as_str()) {
-            let num = common::Math::validate_number(value)?;
+            let num = validate_number(value)?;
             let result = num.cbrt();
             return Ok(format!("∛{} = {}", num, result));
         }
@@ -116,8 +117,8 @@ impl Skill for PowerSkill {
             .get("exponent")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'exponent' parameter"))?;
-        let base_num = common::Math::validate_number(base)?;
-        let exp_num = common::Math::validate_number(exponent)?;
+        let base_num = validate_number(base)?;
+        let exp_num = validate_number(exponent)?;
         let result = base_num.powf(exp_num);
         let precision = parameters
             .get("precision")
@@ -127,7 +128,7 @@ impl Skill for PowerSkill {
             "{} ^ {} = {}",
             base_num,
             exp_num,
-            common::Math::format_number(result, precision as usize)
+            format_number(result, precision as usize)
         ))
     }
 

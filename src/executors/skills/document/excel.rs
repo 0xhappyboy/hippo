@@ -2,10 +2,7 @@ use anyhow::Result;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 
-use crate::executors::{
-    skills::common,
-    types::{Skill, SkillParameter},
-};
+use crate::executors::{ensure_dir, file_exists, types::{Skill, SkillParameter}, validate_path};
 
 #[derive(Debug)]
 pub struct ExcelReadSkill;
@@ -99,8 +96,8 @@ impl Skill for ExcelReadSkill {
             .get("limit")
             .and_then(|v| v.as_u64())
             .unwrap_or(100) as usize;
-        let validated_path = common::File::validate_path(path, None)?;
-        if !common::File::file_exists(&validated_path.to_string_lossy()) {
+        let validated_path = validate_path(path, None)?;
+        if !file_exists(&validated_path.to_string_lossy()) {
             anyhow::bail!("Excel file not found: {}", path);
         }
         // Use calamine to read Excel
@@ -266,9 +263,9 @@ impl Skill for ExcelWriteSkill {
             .get("sheet_name")
             .and_then(|v| v.as_str())
             .unwrap_or("Sheet1");
-        let validated_path = common::File::validate_path(path, None)?;
+        let validated_path = validate_path(path, None)?;
         if let Some(parent) = validated_path.parent() {
-            common::File::ensure_dir(&parent.to_string_lossy())?;
+            ensure_dir(&parent.to_string_lossy())?;
         }
         use rust_xlsxwriter::{Format, Workbook};
         let mut workbook = Workbook::new();

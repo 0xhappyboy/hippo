@@ -3,7 +3,7 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 
 use crate::executors::{
-    skills::common::Http,
+    execute, parse_config,
     types::{Skill, SkillParameter},
 };
 
@@ -117,8 +117,8 @@ impl Skill for ReadUrlSkill {
             .get("max_size")
             .and_then(|v| v.as_u64())
             .unwrap_or(1024 * 1024) as usize;
-        let config = Http::parse_config(parameters)?;
-        let response = Http::execute(&config).await?;
+        let config = parse_config(parameters)?;
+        let response = execute(&config).await?;
         if raw {
             if response.body.len() > max_size {
                 Ok(format!(

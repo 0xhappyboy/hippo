@@ -1,5 +1,5 @@
 use crate::executors::{
-    skills::common::Http,
+    execute, parse_config,
     types::{Skill, SkillParameter},
 };
 use anyhow::Result;
@@ -102,8 +102,8 @@ impl Skill for HttpRequestSkill {
     }
 
     async fn execute(&self, parameters: &HashMap<String, Value>) -> Result<String> {
-        let config = Http::parse_config(parameters)?;
-        let response = Http::execute(&config).await?;
+        let config = parse_config(parameters)?;
+        let response = execute(&config).await?;
         Ok(response.to_formatted_string())
     }
 

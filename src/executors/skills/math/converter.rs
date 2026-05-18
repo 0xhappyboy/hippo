@@ -3,8 +3,9 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 
 use crate::executors::{
-    skills::common,
+    format_number,
     types::{Skill, SkillParameter},
+    validate_number,
 };
 
 #[derive(Debug)]
@@ -115,7 +116,7 @@ impl Skill for UnitConverterSkill {
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'to' parameter"))?
             .to_lowercase();
-        let value = common::Math::validate_number(value_str)?;
+        let value = validate_number(value_str)?;
         let result = convert_units(value, &from_unit, &to_unit)?;
         let precision = parameters
             .get("precision")
@@ -125,7 +126,7 @@ impl Skill for UnitConverterSkill {
             "{} {} = {} {}",
             value,
             from_unit,
-            common::Math::format_number(result, precision as usize),
+            format_number(result, precision as usize),
             to_unit
         ))
     }
