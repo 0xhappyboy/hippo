@@ -1,5 +1,6 @@
 use crate::executors::Executor;
 use crate::i18n;
+use crate::memory::ConversationMemory;
 use crate::skill_loader::SkillLoader;
 use crate::skill_scheduler::SkillScheduler;
 use crate::t;
@@ -8,7 +9,6 @@ use langhub::types::ModelProvider;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
 use tracing::info;
 
 /// System prompt template for natural language processing
@@ -73,7 +73,7 @@ impl StepResult {
 pub struct Hippox {
     scheduler: SkillScheduler,
     executor: Executor,
-    conversations: Arc<RwLock<HashMap<String, Vec<String>>>>,
+    memory: ConversationMemory,
     skills_dir: PathBuf,
 }
 
@@ -100,7 +100,7 @@ impl Hippox {
         Ok(Self {
             scheduler,
             executor,
-            conversations: Arc::new(RwLock::new(HashMap::new())),
+            memory: ConversationMemory::new(),
             skills_dir: PathBuf::from(skills_dir),
         })
     }
@@ -237,8 +237,7 @@ impl Hippox {
         let session_id = session_id.unwrap_or("default");
         let input_trimmed = input.trim();
         if input_trimmed == "clear" {
-            let mut conversations = self.conversations.write().unwrap();
-            conversations.remove(session_id);
+            self.memory.clear_session(session_id);
             return t!("app.conversation_cleared").to_string();
         }
         if input_trimmed == "exit" || input_trimmed == "quit" {
@@ -247,13 +246,7 @@ impl Hippox {
         if input_trimmed.is_empty() {
             return String::new();
         }
-        let history = {
-            let conversations = self.conversations.read().unwrap();
-            conversations
-                .get(session_id)
-                .map(|h| h.join("\n"))
-                .unwrap_or_default()
-        };
+        let history = self.memory.get_history(session_id);
         let mut step_results: Vec<StepResult> = Vec::new();
         let mut final_response = None;
         let max_iterations = 10;
@@ -341,18 +334,7 @@ impl Hippox {
                 self.format_step_results(&step_results)
             }
         });
-        let mut conversations = self.conversations.write().unwrap();
-        let hist = conversations.entry(session_id.to_string()).or_default();
-        hist.push(format!("{}: {}", t!("app.user_prefix"), input));
-        hist.push(format!(
-            "{}: {}",
-            t!("app.assistant_prefix"),
-            final_response
-        ));
-        if hist.len() > 20 {
-            let drain_count = hist.len() - 20;
-            hist.drain(0..drain_count);
-        }
+        self.memory.add_exchange(session_id, input, &final_response);
         final_response
     }
 
@@ -380,21 +362,12 @@ impl Hippox {
     ///
     /// # Example
     /// ```ignore
-    /// use std::collections::HashMap;
-    ///
-    /// // Prepare inputs: (input_text, session_id)
     /// let inputs = vec![
     ///     ("What is 2+2?".to_string(), Some("user123".to_string())),
-    ///     ("Tell me a joke".to_string(), None),  // uses "default" session
-    ///     ("Clear my history".to_string(), Some("user123".to_string())),
+    ///     ("Tell me a joke".to_string(), None),
     /// ];
     ///
     /// let results = hippox.handle_natural_language_batch(inputs).await;
-    ///
-    /// // Access results by index (same order as inputs)
-    /// for (i, result) in results.iter().enumerate() {
-    ///     println!("Result {}: {}", i, result);
-    /// }
     /// ```
     pub async fn handle_natural_language_batch(
         &self,
@@ -511,37 +484,16 @@ Respond with the final result of the workflow execution.
     ///
     /// # Example
     /// ```ignore
-    /// use std::collections::HashMap;
-    /// use serde_json::json;
-    ///
-    /// // Prepare parameters for different skills
     /// let mut email_params = HashMap::new();
     /// email_params.insert("to".to_string(), json!("admin@example.com"));
-    /// email_params.insert("subject".to_string(), json!("Daily Report"));
     ///
-    /// let mut report_params = HashMap::new();
-    /// report_params.insert("date".to_string(), json!("2024-01-15"));
-    /// report_params.insert("format".to_string(), json!("json"));
-    ///
-    /// // Prepare tasks: (skill_name, optional_params)
     /// let tasks = vec![
     ///     ("daily_report".to_string(), Some(report_params)),
     ///     ("send_email".to_string(), Some(email_params)),
-    ///     ("backup_data".to_string(), None),  // No parameters needed
-    ///     ("non_existent".to_string(), None), // Will return error
+    ///     ("backup_data".to_string(), None),
     /// ];
     ///
     /// let results = hippox.handle_skill_md_batch(tasks).await;
-    ///
-    /// // Access results by index (same order as inputs)
-    /// for (i, result) in results.iter().enumerate() {
-    ///     println!("Skill {} result: {}", i, result);
-    /// }
-    ///
-    /// // Check for errors
-    /// if results[3].contains("error.skill_not_found") {
-    ///     println!("The 'non_existent' skill was not found");
-    /// }
     /// ```
     pub async fn handle_skill_md_batch(
         &self,
@@ -570,14 +522,12 @@ Respond with the final result of the workflow execution.
 
     /// Clear conversation history for a session
     pub fn clear_conversation(&self, session_id: &str) {
-        let mut conversations = self.conversations.write().unwrap();
-        conversations.remove(session_id);
+        self.memory.clear_session(session_id);
     }
 
     /// Clear all conversation histories
     pub fn clear_all_conversations(&self) {
-        let mut conversations = self.conversations.write().unwrap();
-        conversations.clear();
+        self.memory.clear_all();
     }
 
     /// List all available atomic skills

@@ -4,6 +4,7 @@ mod envs;
 mod executors;
 mod global;
 mod i18n;
+mod memory;
 mod skill_loader;
 mod skill_scheduler;
 mod types;
@@ -15,8 +16,6 @@ pub use langhub::types::ModelProvider;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
-    use std::collections::HashMap;
     use tempfile::tempdir;
 
     fn create_test_skill_md(dir: &tempfile::TempDir, skill_name: &str, description: &str) {
