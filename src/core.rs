@@ -6,6 +6,7 @@ use crate::executors::Executor;
 use crate::memory::ConversationMemory;
 use crate::skill_loader::SkillLoader;
 use crate::skill_scheduler::SkillScheduler;
+use crate::workflow::{WorkflowExecutor, WorkflowMode};
 use crate::{HippoxConfig, i18n};
 use crate::{get_config, t};
 use langhub::LLMClient;
@@ -14,58 +15,6 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tracing::info;
-
-/// System prompt template for natural language processing
-const SYSTEM_PROMPT_TEMPLATE: &str = r#"You are an AI assistant that can execute atomic skills/tools.
-
-## Available Atomic Skills (JSON Registry)
-{}
-
-## Response Format
-
-You can respond in one of three ways:
-
-### 1. Execute a single skill
-{"action": "skill_name", "parameters": {"param1": "value1"}}
-
-### 2. Execute multiple skills in sequence (no dependencies)
-{
-  "mode": "batch",
-  "steps": [
-    {"action": "skill1", "parameters": {}},
-    {"action": "skill2", "parameters": {}}
-  ]
-}
-
-### 3. Finish and return final answer
-{"action": "done", "message": "Your final answer here"}
-
-## Rules
-
-- If the task requires conditional logic (e.g., "if rain then send email"), use mode "single" and execute one skill at a time
-- After each skill execution, you will receive the result and can decide the next step
-- Use "batch" mode only when skills have no dependencies on each other's results
-- Use "done" when you have completed the task or no skill is needed
-
-## Previous Execution Results (if any)
-"#;
-
-/// Step result for multi-step execution
-#[derive(Debug, Clone)]
-pub struct StepResult {
-    pub skill: String,
-    pub parameters: HashMap<String, Value>,
-    pub output: String,
-}
-
-impl StepResult {
-    pub fn to_string(&self) -> String {
-        format!(
-            "Executed skill '{}' with parameters {:?}\nResult: {}",
-            self.skill, self.parameters, self.output
-        )
-    }
-}
 
 pub enum ConfigInitMethod {
     Env,
@@ -86,17 +35,12 @@ pub struct Hippox {
     executor: Executor,
     memory: ConversationMemory,
     skills_dir: PathBuf,
+    workflow_mode: WorkflowMode,
+    workflow_executor: WorkflowExecutor,
 }
 
 impl Hippox {
-    /// Create a new Hippox core instance
-    ///
-    /// # Arguments
-    /// * `skills_dir` - Path to the directory containing SKILL.md subdirectories
-    /// * `provider` - LLM provider to use (OpenAI, etc.)
-    /// * `api_key` - API key for the LLM provider
-    /// * `extra_keys` - Optional additional keys for providers that need them (e.g., secret_key, endpoint)
-    /// * `lang` - Language for i18n
+    /// Create a new Hippox core instance with default ReAct workflow mode
     pub async fn new(
         skills_dir: &str,
         provider: ModelProvider,
@@ -104,9 +48,29 @@ impl Hippox {
         extra_keys: Option<HashMap<String, String>>,
         config_method: ConfigInitMethod,
     ) -> anyhow::Result<Self> {
+        Self::with_workflow_mode(
+            skills_dir,
+            provider,
+            api_key,
+            extra_keys,
+            config_method,
+            WorkflowMode::default(),
+        )
+        .await
+    }
+
+    /// Create a new Hippox core instance with specified workflow mode
+    pub async fn with_workflow_mode(
+        skills_dir: &str,
+        provider: ModelProvider,
+        api_key: Option<String>,
+        extra_keys: Option<HashMap<String, String>>,
+        config_method: ConfigInitMethod,
+        workflow_mode: WorkflowMode,
+    ) -> anyhow::Result<Self> {
         info!(
-            "Initializing Hippox core with skills directory: {}",
-            skills_dir
+            "Initializing Hippox core with skills directory: {}, workflow mode: {}",
+            skills_dir, workflow_mode
         );
         // init config
         match config_method {
@@ -123,134 +87,21 @@ impl Hippox {
         // init llm scheduler
         let scheduler = SkillScheduler::new(llm);
         let executor = Executor::new();
+        let workflow_executor = WorkflowExecutor::new(workflow_mode);
         Ok(Self {
             scheduler,
             executor,
             memory: ConversationMemory::new(),
             skills_dir: PathBuf::from(skills_dir),
+            workflow_mode,
+            workflow_executor,
         })
     }
 
-    /// Generate atomic skill registry JSON for LLM
+    /// Handle natural language input from user using configured workflow mode
     ///
-    /// This generates a JSON registry of all available atomic skills
-    /// that the LLM can use to decide which skill to call.
-    fn get_atomic_skills_registry(&self) -> String {
-        let skills = crate::executors::registry::list_skills();
-        let registry: Vec<serde_json::Value> = skills
-            .iter()
-            .filter_map(|name| {
-                crate::executors::registry::get_skill(name).map(|skill| {
-                    serde_json::json!({
-                        "name": name,
-                        "description": skill.description(),
-                        "category": skill.category(),
-                        "parameters": skill.parameters(),
-                    })
-                })
-            })
-            .collect();
-        serde_json::to_string_pretty(&registry).unwrap_or_else(|_| "[]".to_string())
-    }
-
-    /// Build system prompt for natural language processing
-    fn build_natural_language_prompt(&self) -> String {
-        let registry_json = self.get_atomic_skills_registry();
-        SYSTEM_PROMPT_TEMPLATE.replace("{}", &registry_json)
-    }
-
-    /// Parse LLM response into execution instruction
-    fn handle_llm_response(&self, response: &str) -> anyhow::Result<ExecutionInstruction> {
-        let json_str = Self::extract_json(response);
-        let value: Value = serde_json::from_str(&json_str)?;
-        if let Some(message) = value.get("message").and_then(|v| v.as_str()) {
-            if value.get("action").and_then(|v| v.as_str()) == Some("done") {
-                return Ok(ExecutionInstruction::Done(message.to_string()));
-            }
-        }
-        if let Some(mode) = value.get("mode").and_then(|v| v.as_str()) {
-            if mode == "batch" {
-                if let Some(steps) = value.get("steps").and_then(|v| v.as_array()) {
-                    let mut skill_calls = Vec::new();
-                    for step in steps {
-                        let call: crate::executors::SkillCall =
-                            serde_json::from_value(step.clone())?;
-                        skill_calls.push(call);
-                    }
-                    return Ok(ExecutionInstruction::Batch(skill_calls));
-                }
-            }
-        }
-        if let Ok(call) = serde_json::from_value(value) {
-            return Ok(ExecutionInstruction::Single(call));
-        }
-        anyhow::bail!("Unable to parse LLM response: {}", response)
-    }
-
-    /// Extract JSON from LLM response (handles markdown code blocks)
-    pub fn extract_json(text: &str) -> String {
-        if let Some(start) = text.find("```json") {
-            let after_start = &text[start + 7..];
-            if let Some(end) = after_start.find("```") {
-                return after_start[..end].trim().to_string();
-            }
-        }
-        if let Some(start) = text.find("```") {
-            let after_start = &text[start + 3..];
-            if let Some(end) = after_start.find("```") {
-                return after_start[..end].trim().to_string();
-            }
-        }
-        if let Some(start) = text.find('{') {
-            if let Some(end) = text.rfind('}') {
-                return text[start..=end].to_string();
-            }
-        }
-        text.to_string()
-    }
-
-    /// Execute a plan (multiple skills in sequence)
-    async fn execute_plan(
-        &self,
-        steps: &[crate::executors::SkillCall],
-    ) -> Result<Vec<StepResult>, String> {
-        let mut results = Vec::new();
-        for step in steps {
-            match self.executor.execute(step).await {
-                Ok(output) => {
-                    results.push(StepResult {
-                        skill: step.action.clone(),
-                        parameters: step.parameters.clone(),
-                        output: output.clone(),
-                    });
-                }
-                Err(e) => {
-                    return Err(format!("Skill '{}' failed: {}", step.action, e));
-                }
-            }
-        }
-        Ok(results)
-    }
-
-    /// Format step results for output
-    fn format_step_results(&self, results: &[StepResult]) -> String {
-        if results.is_empty() {
-            return t!("skill.no_steps_executed").to_string();
-        }
-        if results.len() == 1 {
-            return results[0].output.clone();
-        }
-        let mut output = format!("{}:\n\n", t!("skill.executed_steps", results.len()));
-        for (i, result) in results.iter().enumerate() {
-            output.push_str(&format!("{}: {}\n", i + 1, result.output));
-        }
-        output
-    }
-
-    /// Handle natural language input from user
-    ///
-    /// This function processes user natural language input, uses LLM to
-    /// select appropriate atomic skills from the registry, and executes them.
+    /// This function processes user natural language input using the workflow
+    /// mode specified during initialization.
     ///
     /// # Arguments
     /// * `input` - Natural language input from the user
@@ -261,107 +112,15 @@ impl Hippox {
     /// The response string after processing
     pub async fn handle_natural_language(&self, input: &str, session_id: Option<&str>) -> String {
         let session_id = session_id.unwrap_or("default");
-        let input_trimmed = input.trim();
-        if input_trimmed == "clear" {
-            self.memory.clear_session(session_id);
-            return t!("app.conversation_cleared").to_string();
-        }
-        if input_trimmed == "exit" || input_trimmed == "quit" {
-            return "goodbye".to_string();
-        }
-        if input_trimmed.is_empty() {
-            return String::new();
-        }
-        let history = self.memory.get_history(session_id);
-        let mut step_results: Vec<StepResult> = Vec::new();
-        let mut final_response = None;
-        let max_iterations = 10;
-        let mut iteration = 0;
-        while iteration < max_iterations {
-            iteration += 1;
-            let execution_summary = if step_results.is_empty() {
-                String::new()
-            } else {
-                let mut summary = format!("\n## {}\n", t!("skill.previous_executed_steps"));
-                for (i, result) in step_results.iter().enumerate() {
-                    summary.push_str(&format!("{}. {}\n", i + 1, result.to_string()));
-                }
-                summary
-            };
-            let system_prompt = self.build_natural_language_prompt();
-            let user_prompt = format!(
-                "{}\n\n## {}\n{}\n\n## {}\n{}\n\n{}\n\n## {}\n",
-                system_prompt,
-                t!("prompt.original_request"),
-                input_trimmed,
-                t!("prompt.conversation_history"),
-                history,
-                execution_summary,
-                t!("prompt.your_response")
-            );
-            let llm_response = match self.scheduler.get_llm().generate(&user_prompt).await {
-                Ok(resp) => resp,
-                Err(e) => {
-                    return format!("{}: {}", t!("error.llm_error"), e);
-                }
-            };
-            let instruction = match self.handle_llm_response(&llm_response) {
-                Ok(instr) => instr,
-                Err(_) => {
-                    return llm_response;
-                }
-            };
-            match instruction {
-                ExecutionInstruction::Done(message) => {
-                    final_response = Some(message);
-                    break;
-                }
-                ExecutionInstruction::Single(call) => match self.executor.execute(&call).await {
-                    Ok(output) => {
-                        step_results.push(StepResult {
-                            skill: call.action.clone(),
-                            parameters: call.parameters.clone(),
-                            output: output.clone(),
-                        });
-                    }
-                    Err(e) => {
-                        final_response = Some(format!(
-                            "{} '{}': {}",
-                            t!("error.skill_failed"),
-                            call.action,
-                            e
-                        ));
-                        break;
-                    }
-                },
-                ExecutionInstruction::Batch(steps) => match self.execute_plan(&steps).await {
-                    Ok(results) => {
-                        for result in results {
-                            step_results.push(result);
-                        }
-                        let summary = self.format_step_results(&step_results);
-                        final_response = Some(summary);
-                        break;
-                    }
-                    Err(e) => {
-                        final_response = Some(e);
-                        break;
-                    }
-                },
-            }
-        }
-        if iteration >= max_iterations {
-            final_response = Some(t!("error.max_iterations_reached").to_string());
-        }
-        let final_response = final_response.unwrap_or_else(|| {
-            if step_results.is_empty() {
-                t!("skill.no_actions_executed").to_string()
-            } else {
-                self.format_step_results(&step_results)
-            }
-        });
-        self.memory.add_exchange(session_id, input, &final_response);
-        final_response
+        self.workflow_executor
+            .execute(
+                &self.scheduler,
+                &self.memory,
+                &self.skills_dir,
+                input,
+                session_id,
+            )
+            .await
     }
 
     /// Handle multiple natural language inputs in parallel
@@ -377,24 +136,6 @@ impl Hippox {
     ///
     /// # Returns
     /// A vector of response strings in the **same order** as the input tasks.
-    ///
-    /// ## Return Value Structure
-    /// - **Success**: Returns the natural language response string
-    /// - **Failure**: Returns an error message string (e.g., "LLM error: ...", "Task panic: ...")
-    /// - **Empty**: Returns empty string for empty input
-    ///
-    /// Each element in the returned vector corresponds to the task at the same index.
-    /// Errors in one task do not affect other tasks.
-    ///
-    /// # Example
-    /// ```ignore
-    /// let inputs = vec![
-    ///     ("What is 2+2?".to_string(), Some("user123".to_string())),
-    ///     ("Tell me a joke".to_string(), None),
-    /// ];
-    ///
-    /// let results = hippox.handle_natural_language_batch(inputs).await;
-    /// ```
     pub async fn handle_natural_language_batch(
         &self,
         inputs: Vec<(String, Option<String>)>,
@@ -403,8 +144,9 @@ impl Hippox {
             return Vec::new();
         }
         info!(
-            "Processing {} natural language inputs in parallel",
-            inputs.len()
+            "Processing {} natural language inputs in parallel with mode {:?}",
+            inputs.len(),
+            self.workflow_mode
         );
         let mut handles = Vec::new();
         for (input, session_id) in inputs {
@@ -429,7 +171,6 @@ impl Hippox {
     /// Handle SKILL.md file execution
     ///
     /// This function loads and executes a SKILL.md file as a predefined workflow.
-    /// The skill file is loaded from the skills directory and executed step by step.
     ///
     /// # Arguments
     /// * `skill_name` - Name of the skill (subdirectory name containing SKILL.md)
@@ -442,7 +183,6 @@ impl Hippox {
         skill_name: &str,
         params: Option<HashMap<String, Value>>,
     ) -> String {
-        // Load the SKILL.md file
         let skill_file =
             match SkillLoader::load_by_name(self.skills_dir.to_str().unwrap_or("."), skill_name) {
                 Ok(Some(file)) => file,
@@ -483,44 +223,6 @@ Respond with the final result of the workflow execution.
     }
 
     /// Handle multiple SKILL.md files execution in parallel
-    ///
-    /// This function executes multiple SKILL.md workflows concurrently.
-    /// Each workflow is independent and runs in its own task.
-    ///
-    /// # Arguments
-    /// * `tasks` - A vector of tuples: `Vec<(String, Option<HashMap<String, Value>>)>`
-    ///     - First element: The skill name (subdirectory name containing SKILL.md)
-    ///     - Second element: Optional parameters to pass to the skill execution
-    ///       (None means no parameters)
-    ///
-    /// # Returns
-    /// A vector of result strings in the **same order** as the input tasks.
-    ///
-    /// ## Return Value Structure
-    /// | Case | Return Value Format |
-    /// |------|---------------------|
-    /// | **Success** | The execution result from the SKILL.md workflow |
-    /// | **Skill not found** | `"error.skill_not_found: {skill_name}"` |
-    /// | **Load failed** | `"error.load_skill_failed: {error}"` |
-    /// | **LLM error** | `"error.llm_error: {error}"` |
-    /// | **Task panic** | `"error.task_panic: {error}"` |
-    ///
-    /// Errors in one task do not affect other tasks.
-    /// The returned vector maintains the same index order as the input tasks.
-    ///
-    /// # Example
-    /// ```ignore
-    /// let mut email_params = HashMap::new();
-    /// email_params.insert("to".to_string(), json!("admin@example.com"));
-    ///
-    /// let tasks = vec![
-    ///     ("daily_report".to_string(), Some(report_params)),
-    ///     ("send_email".to_string(), Some(email_params)),
-    ///     ("backup_data".to_string(), None),
-    /// ];
-    ///
-    /// let results = hippox.handle_skill_md_batch(tasks).await;
-    /// ```
     pub async fn handle_skill_md_batch(
         &self,
         tasks: Vec<(String, Option<HashMap<String, Value>>)>,
@@ -544,6 +246,25 @@ Respond with the final result of the workflow execution.
             }
         }
         results
+    }
+
+    /// Get the atomic skills registry as JSON string
+    fn get_atomic_skills_registry(&self) -> String {
+        let skills = crate::executors::registry::list_skills();
+        let registry: Vec<serde_json::Value> = skills
+            .iter()
+            .filter_map(|name| {
+                crate::executors::registry::get_skill(name).map(|skill| {
+                    serde_json::json!({
+                        "name": name,
+                        "description": skill.description(),
+                        "category": skill.category(),
+                        "parameters": skill.parameters(),
+                    })
+                })
+            })
+            .collect();
+        serde_json::to_string_pretty(&registry).unwrap_or_else(|_| "[]".to_string())
     }
 
     /// Clear conversation history for a session
@@ -648,6 +369,12 @@ Respond with the final result of the workflow execution.
         &self.scheduler
     }
 
+    /// Get the current workflow mode
+    pub fn workflow_mode(&self) -> WorkflowMode {
+        self.workflow_mode
+    }
+
+    /// Update configuration
     pub fn update_config<F>(&self, f: F) -> anyhow::Result<()>
     where
         F: FnOnce(&mut HippoxConfig),
@@ -655,16 +382,10 @@ Respond with the final result of the workflow execution.
         crate::config::update_config(f)
     }
 
+    /// Get configuration
     pub fn get_config(&self) -> HippoxConfig {
         crate::config::get_config()
     }
-}
-
-/// Execution instruction parsed from LLM response
-pub enum ExecutionInstruction {
-    Done(String),
-    Single(crate::executors::SkillCall),
-    Batch(Vec<crate::executors::SkillCall>),
 }
 
 #[cfg(test)]
@@ -697,7 +418,7 @@ Process the request and return a result.
     }
 
     #[tokio::test]
-    async fn test_hippox_new_with_env() {
+    async fn test_hippox_new_with_default_mode() {
         let temp_dir = tempdir().unwrap();
         let hippox = Hippox::new(
             temp_dir.path().to_str().unwrap(),
@@ -708,24 +429,59 @@ Process the request and return a result.
         )
         .await;
         assert!(hippox.is_ok());
+        let hippox = hippox.unwrap();
+        assert_eq!(hippox.workflow_mode(), WorkflowMode::ReAct);
     }
 
     #[tokio::test]
-    async fn test_hippox_new_with_params_json() {
+    async fn test_hippox_new_with_batch_mode() {
         let temp_dir = tempdir().unwrap();
-        let config_json = r#"{"lang": "zh", "provider": "openai"}"#;
-        let hippox = Hippox::new(
+        let hippox = Hippox::with_workflow_mode(
             temp_dir.path().to_str().unwrap(),
             ModelProvider::OpenAI,
             Some("test-api-key".to_string()),
             None,
-            ConfigInitMethod::ParamsJsonStr(config_json.to_string()),
+            ConfigInitMethod::Env,
+            WorkflowMode::Batch,
         )
         .await;
         assert!(hippox.is_ok());
         let hippox = hippox.unwrap();
-        let config = hippox.get_config();
-        assert_eq!(config.lang, "zh");
+        assert_eq!(hippox.workflow_mode(), WorkflowMode::Batch);
+    }
+
+    #[tokio::test]
+    async fn test_hippox_new_with_chain_mode() {
+        let temp_dir = tempdir().unwrap();
+        let hippox = Hippox::with_workflow_mode(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            ConfigInitMethod::Env,
+            WorkflowMode::Chain,
+        )
+        .await;
+        assert!(hippox.is_ok());
+        let hippox = hippox.unwrap();
+        assert_eq!(hippox.workflow_mode(), WorkflowMode::Chain);
+    }
+
+    #[tokio::test]
+    async fn test_hippox_new_with_plan_and_execute_mode() {
+        let temp_dir = tempdir().unwrap();
+        let hippox = Hippox::with_workflow_mode(
+            temp_dir.path().to_str().unwrap(),
+            ModelProvider::OpenAI,
+            Some("test-api-key".to_string()),
+            None,
+            ConfigInitMethod::Env,
+            WorkflowMode::PlanAndExecute,
+        )
+        .await;
+        assert!(hippox.is_ok());
+        let hippox = hippox.unwrap();
+        assert_eq!(hippox.workflow_mode(), WorkflowMode::PlanAndExecute);
     }
 
     #[tokio::test]
@@ -745,23 +501,6 @@ Process the request and return a result.
     }
 
     #[tokio::test]
-    async fn test_list_skill_md_files() {
-        let temp_dir = tempdir().unwrap();
-        create_test_skill_md(&temp_dir, "test-skill", "A test skill");
-        let hippox = Hippox::new(
-            temp_dir.path().to_str().unwrap(),
-            ModelProvider::OpenAI,
-            Some("test-api-key".to_string()),
-            None,
-            ConfigInitMethod::Env,
-        )
-        .await
-        .unwrap();
-        let list = hippox.list_skill_md_files();
-        assert!(list.contains("test-skill"));
-    }
-
-    #[tokio::test]
     async fn test_clear_conversation() {
         let temp_dir = tempdir().unwrap();
         let hippox = Hippox::new(
@@ -775,111 +514,5 @@ Process the request and return a result.
         .unwrap();
         hippox.clear_conversation("test-session");
         hippox.clear_all_conversations();
-    }
-
-    #[tokio::test]
-    async fn test_update_config() {
-        let temp_dir = tempdir().unwrap();
-        let hippox = Hippox::new(
-            temp_dir.path().to_str().unwrap(),
-            ModelProvider::OpenAI,
-            Some("test-api-key".to_string()),
-            None,
-            ConfigInitMethod::Env,
-        )
-        .await
-        .unwrap();
-        hippox
-            .update_config(|config| {
-                config.lang = "zh".to_string();
-            })
-            .unwrap();
-        let config = hippox.get_config();
-        assert_eq!(config.lang, "zh");
-    }
-
-    #[test]
-    fn test_extract_json() {
-        let text = r#"Some text {"action": "calculator", "parameters": {"input": "2+2"}}"#;
-        let json = Hippox::extract_json(text);
-        assert!(json.contains("calculator"));
-        let text = "```json\n{\"action\": \"test\"}\n```";
-        let json = Hippox::extract_json(text);
-        assert_eq!(json, "{\"action\": \"test\"}");
-        let text = "```\n{\"action\": \"test\"}\n```";
-        let json = Hippox::extract_json(text);
-        assert_eq!(json, "{\"action\": \"test\"}");
-    }
-
-    #[test]
-    fn test_get_atomic_skill_names() {
-        let temp_dir = tempdir().unwrap();
-        let hippox = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            Hippox::new(
-                temp_dir.path().to_str().unwrap(),
-                ModelProvider::OpenAI,
-                Some("test-api-key".to_string()),
-                None,
-                ConfigInitMethod::Env,
-            )
-            .await
-            .unwrap()
-        });
-        let names = hippox.get_atomic_skill_names();
-        assert!(!names.is_empty());
-        assert!(names.contains(&"calculator".to_string()));
-    }
-
-    #[test]
-    fn test_has_atomic_skills() {
-        let temp_dir = tempdir().unwrap();
-        let hippox = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            Hippox::new(
-                temp_dir.path().to_str().unwrap(),
-                ModelProvider::OpenAI,
-                Some("test-api-key".to_string()),
-                None,
-                ConfigInitMethod::Env,
-            )
-            .await
-            .unwrap()
-        });
-        assert!(hippox.has_atomic_skills());
-    }
-
-    #[test]
-    fn test_skills_directory() {
-        let temp_dir = tempdir().unwrap();
-        let path = temp_dir.path().to_str().unwrap();
-        let hippox = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            Hippox::new(
-                path,
-                ModelProvider::OpenAI,
-                Some("test-api-key".to_string()),
-                None,
-                ConfigInitMethod::Env,
-            )
-            .await
-            .unwrap()
-        });
-        assert_eq!(hippox.skills_directory().to_str().unwrap(), path);
-    }
-
-    #[test]
-    fn test_get_config() {
-        let temp_dir = tempdir().unwrap();
-        let hippox = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            Hippox::new(
-                temp_dir.path().to_str().unwrap(),
-                ModelProvider::OpenAI,
-                Some("test-api-key".to_string()),
-                None,
-                ConfigInitMethod::Env,
-            )
-            .await
-            .unwrap()
-        });
-        let config = hippox.get_config();
-        assert_eq!(config.lang, "en");
     }
 }

@@ -6,6 +6,7 @@ mod i18n;
 mod memory;
 mod skill_loader;
 mod skill_scheduler;
+mod workflow;
 
 pub use config::{GLOBAL_CONFIG, HippoxConfig, get_config};
 pub use core::Hippox;
@@ -14,7 +15,10 @@ pub use langhub::types::ModelProvider;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::ConfigInitMethod;
+    use crate::{
+        core::ConfigInitMethod,
+        workflow::{Workflow, WorkflowExecutor},
+    };
     use serde_json::json;
     use tempfile::tempdir;
 
@@ -168,13 +172,13 @@ Process the request and return a result.
     #[test]
     fn test_extract_json() {
         let text = r#"Some text {"action": "calculator", "parameters": {"input": "2+2"}}"#;
-        let json = Hippox::extract_json(text);
+        let json = WorkflowExecutor::extract_json(text);
         assert!(json.contains("calculator"));
         let text = "```json\n{\"action\": \"test\"}\n```";
-        let json = Hippox::extract_json(text);
+        let json = WorkflowExecutor::extract_json(text);
         assert_eq!(json, "{\"action\": \"test\"}");
         let text = "```\n{\"action\": \"test\"}\n```";
-        let json = Hippox::extract_json(text);
+        let json = WorkflowExecutor::extract_json(text);
         assert_eq!(json, "{\"action\": \"test\"}");
     }
 
