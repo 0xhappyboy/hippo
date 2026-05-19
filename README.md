@@ -95,10 +95,6 @@ port = 587
 }
 ```
 
-## SKill Scheduling Model
-
-<img src="./assets/scheduler_en.png" width="100%">
-
 ## Workflow Model
 
 | Mode           | Enum Value                   | Core Features                                                                                                        | LLM Calls                           | Use Cases                                                 |
@@ -107,6 +103,33 @@ port = 587
 | Batch          | WorkflowMode::Batch          | Execute multiple independent skills in parallel                                                                      | 1 (generates batch plan)            | Independent operations, bulk processing                   |
 | Chain          | WorkflowMode::Chain          | Sequential execution with variable passing ({{variable}} syntax)                                                     | 1 (generates chain)                 | Linear pipelines, data transformation chains              |
 | PlanAndExecute | WorkflowMode::PlanAndExecute | One-time planning with conditional branching, variable references ({"$ref":"var"}), error handling (retry/skip/fail) | 1 plan + optional dynamic decisions | Complex workflows, conditional logic, deterministic tasks |
+
+<table>
+  <tr>
+    <td align="left">
+    <h4>Chain</h4>
+    </td>
+    <td align="left">
+    <h4>Batch</h4>
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./assets/architecture/chain_en.png" width="100%" ></td>
+    <td align="center"><img src="./assets/architecture/batch_en.png" width="100%"></td>
+  </tr>
+   <tr>
+    <td align="left">
+    <h4>ReAct</h4>
+    </td>
+    <td align="left">
+    <h4>PlanAndExecute</h4>
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./assets/architecture/re-act_en.png" width="100%"></td>
+    <td align="center"><img src="./assets/architecture/plan-and-execute_en.png" width="100%"></td>
+  </tr>
+</table>
 
 ## Atomic Skill List
 

@@ -95,10 +95,6 @@ port = 587
 }
 ```
 
-## Skill调度模型
-
-<img src="./assets/scheduler_cn.png" width="100%">
-
 ## 工作流模式
 
 | 模式           | 枚举值                       | 核心特点                                                                                   | LLM调用次数            | 适用场景                         |
@@ -107,6 +103,33 @@ port = 587
 | Batch          | WorkflowMode::Batch          | 并行执行多个无依赖关系的独立技能                                                           | 1次（生成批量计划）    | 独立操作、批量处理               |
 | Chain          | WorkflowMode::Chain          | 顺序执行，支持变量传递（{{variable}}语法）                                                 | 1次（生成链）          | 线性管道、数据转换链             |
 | PlanAndExecute | WorkflowMode::PlanAndExecute | 一次性规划完整工作流，支持条件分支、变量引用（{"$ref":"var"}）、错误处理（重试/跳过/失败） | 1次规划 + 可选动态决策 | 复杂工作流、条件逻辑、确定性任务 |
+
+<table>
+  <tr>
+    <td align="left">
+    <h4>链式模式</h4>
+    </td>
+    <td align="left">
+    <h4>批处理模式</h4>
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./assets/architecture/chain_cn.png" width="100%"></td>
+    <td align="center"><img src="./assets/architecture/batch_cn.png" width="100%"></td>
+  </tr>
+   <tr>
+    <td align="left">
+    <h4>推理—行动模式</h4>
+    </td>
+    <td align="left">
+    <h4>规划—执行模式</h4>
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><img src="./assets/architecture/re-act_cn.png" width="100%"></td>
+    <td align="center"><img src="./assets/architecture/plan-and-execute_cn.png" width="100%"></td>
+  </tr>
+</table>
 
 ## 原子Skill清单
 
