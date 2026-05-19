@@ -171,6 +171,8 @@ impl Hippox {
     /// Handle SKILL.md file execution
     ///
     /// This function loads and executes a SKILL.md file as a predefined workflow.
+    /// It uses the workflow executor to actually call atomic skills, following
+    /// the configured workflow mode (ReAct, Batch, Chain, PlanAndExecute).
     ///
     /// # Arguments
     /// * `skill_name` - Name of the skill (subdirectory name containing SKILL.md)
@@ -193,36 +195,52 @@ impl Hippox {
                     return format!("{}: {}", t!("error.load_skill_failed"), e);
                 }
             };
-        info!("Executing SKILL.md: {}", skill_name);
-        let instructions = &skill_file.instructions;
-        let registry_json = self.get_atomic_skills_registry();
-        let workflow_prompt = format!(
-            r#"You are executing a predefined workflow from a SKILL.md file.
-
-## Workflow Instructions
-{}
-
-## Available Atomic Skills
-{}
-
-## Parameters
-{}
-
-## Task
-Execute the workflow according to the instructions above. Use the available atomic skills to complete each step.
-Respond with the final result of the workflow execution.
-"#,
-            instructions,
-            registry_json,
-            serde_json::to_string_pretty(&params.unwrap_or_default()).unwrap_or_default()
+        info!(
+            "Executing SKILL.md: {} with workflow mode: {}",
+            skill_name, self.workflow_mode
         );
-        match self.scheduler.get_llm().generate(&workflow_prompt).await {
-            Ok(response) => response,
-            Err(e) => format!("{}: {}", t!("error.llm_error"), e),
+        let mut instructions = skill_file.instructions;
+        if let Some(params) = &params {
+            for (key, value) in params {
+                let placeholder = format!("{{{{{}}}}}", key);
+                let replacement = match value {
+                    Value::String(s) => s.clone(),
+                    Value::Number(n) => n.to_string(),
+                    Value::Bool(b) => b.to_string(),
+                    _ => value.to_string(),
+                };
+                instructions = instructions.replace(&placeholder, &replacement);
+            }
         }
+        let registry_json = self.get_atomic_skills_registry();
+        let enhanced_input = format!(
+            "{}\n\n## Available Atomic Skills\n{}\n\n## Task\nExecute the workflow step by step according to the instructions above.",
+            instructions, registry_json
+        );
+        let session_id = format!("skill_md_{}", skill_name);
+        self.workflow_executor
+            .execute(
+                &self.scheduler,
+                &self.memory,
+                &self.skills_dir,
+                &enhanced_input,
+                &session_id,
+            )
+            .await
     }
 
     /// Handle multiple SKILL.md files execution in parallel
+    ///
+    /// This function executes multiple SKILL.md workflows concurrently.
+    /// Each skill execution uses its own session ID and follows the configured workflow mode.
+    ///
+    /// # Arguments
+    /// * `tasks` - A vector of tuples: `Vec<(String, Option<HashMap<String, Value>>)>`
+    ///     - First element: The skill name
+    ///     - Second element: Optional parameters for the skill
+    ///
+    /// # Returns
+    /// A vector of execution results in the same order as the input tasks
     pub async fn handle_skill_md_batch(
         &self,
         tasks: Vec<(String, Option<HashMap<String, Value>>)>,
@@ -230,7 +248,11 @@ Respond with the final result of the workflow execution.
         if tasks.is_empty() {
             return Vec::new();
         }
-        info!("Executing {} SKILL.md files in parallel", tasks.len());
+        info!(
+            "Executing {} SKILL.md files in parallel with workflow mode: {:?}",
+            tasks.len(),
+            self.workflow_mode
+        );
         let mut handles = Vec::new();
         for (skill_name, params) in tasks {
             let self_clone = self.clone();
