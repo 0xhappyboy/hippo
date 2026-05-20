@@ -5,8 +5,8 @@
     HippoX
 </h1>
 <h4 align="center">
-一个可靠的AI代理与Skills编排运行时引擎. <br>
-一个Skill驱动的AI代理引擎, 你只需要编写 `SKILL.md` 文件来描述技能就能自动加载并执行.
+一个可靠的具有自主决策能力的AI运行时和技能编排引擎.<br>
+一个Skill驱动的AI运行时,具有自主决策能力,只需编写`SKILL.md`文件即可自动加载和执行技能.
 </h4>
 <p align="center">
   <a href="https://github.com/0xhappyboy/hippo/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache2.0-d1d1f6.svg?style=flat&labelColor=1C2C2E&color=BEC5C9&logo=googledocs&label=license&logoColor=BEC5C9" alt="License"></a>

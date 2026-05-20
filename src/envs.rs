@@ -105,6 +105,40 @@ pub const HIPPOX_GITHUB_API_URL: &str = "HIPPOX_GITHUB_API_URL";
 /// GitHub API timeout in seconds
 pub const HIPPOX_GITHUB_TIMEOUT: &str = "HIPPOX_GITHUB_TIMEOUT";
 
+// ==================== Docker Configuration ====================
+/// Docker daemon host (e.g., unix:///var/run/docker.sock, tcp://localhost:2375)
+pub const HIPPOX_DOCKER_HOST: &str = "HIPPOX_DOCKER_HOST";
+/// Docker API version
+pub const HIPPOX_DOCKER_API_VERSION: &str = "HIPPOX_DOCKER_API_VERSION";
+/// Docker connection timeout (seconds)
+pub const HIPPOX_DOCKER_TIMEOUT: &str = "HIPPOX_DOCKER_TIMEOUT";
+/// Docker TLS verify
+pub const HIPPOX_DOCKER_TLS_VERIFY: &str = "HIPPOX_DOCKER_TLS_VERIFY";
+/// Docker cert path
+pub const HIPPOX_DOCKER_CERT_PATH: &str = "HIPPOX_DOCKER_CERT_PATH";
+
+// ==================== k8s Configuration ====================
+/// Kubeconfig file path (default: ~/.kube/config)
+pub const HIPPOX_K8S_KUBECONFIG: &str = "HIPPOX_K8S_KUBECONFIG";
+/// k8s context name
+pub const HIPPOX_K8S_CONTEXT: &str = "HIPPOX_K8S_CONTEXT";
+/// k8s namespace (default: default)
+pub const HIPPOX_K8S_NAMESPACE: &str = "HIPPOX_K8S_NAMESPACE";
+/// k8s API server URL
+pub const HIPPOX_K8S_API_SERVER: &str = "HIPPOX_K8S_API_SERVER";
+/// k8s API token
+pub const HIPPOX_K8S_API_TOKEN: &str = "HIPPOX_K8S_API_TOKEN";
+/// k8s API timeout (seconds)
+pub const HIPPOX_K8S_TIMEOUT: &str = "HIPPOX_K8S_TIMEOUT";
+/// Skip TLS verify for k8s API
+pub const HIPPOX_K8S_INSECURE: &str = "HIPPOX_K8S_INSECURE";
+/// k8s CA certificate path
+pub const HIPPOX_K8S_CA_CERT: &str = "HIPPOX_K8S_CA_CERT";
+/// k8s client certificate path
+pub const HIPPOX_K8S_CLIENT_CERT: &str = "HIPPOX_K8S_CLIENT_CERT";
+/// k8s client key path
+pub const HIPPOX_K8S_CLIENT_KEY: &str = "HIPPOX_K8S_CLIENT_KEY";
+
 /// Get environment variable value with optional default
 pub fn get_env(key: &str) -> Option<String> {
     std::env::var(key).ok()

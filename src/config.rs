@@ -76,6 +76,23 @@ pub struct HippoxConfig {
     pub github_token: String,
     pub github_api_url: String,
     pub github_timeout: u64,
+    // ==================== Docker Settings ====================
+    pub docker_host: String,
+    pub docker_api_version: String,
+    pub docker_timeout: u64,
+    pub docker_tls_verify: bool,
+    pub docker_cert_path: String,
+    // ==================== k8s Settings ====================
+    pub k8s_kubeconfig: String,
+    pub k8s_context: String,
+    pub k8s_namespace: String,
+    pub k8s_api_server: String,
+    pub k8s_api_token: String,
+    pub k8s_timeout: u64,
+    pub k8s_insecure: bool,
+    pub k8s_ca_cert: String,
+    pub k8s_client_cert: String,
+    pub k8s_client_key: String,
 }
 
 impl Default for HippoxConfig {
@@ -141,6 +158,23 @@ impl Default for HippoxConfig {
             github_token: String::new(),
             github_api_url: "https://api.github.com".to_string(),
             github_timeout: 30,
+            // Docker defaults
+            docker_host: "unix:///var/run/docker.sock".to_string(),
+            docker_api_version: String::new(),
+            docker_timeout: 30,
+            docker_tls_verify: false,
+            docker_cert_path: String::new(),
+            // k8s defaults
+            k8s_kubeconfig: String::new(),
+            k8s_context: String::new(),
+            k8s_namespace: "default".to_string(),
+            k8s_api_server: String::new(),
+            k8s_api_token: String::new(),
+            k8s_timeout: 30,
+            k8s_insecure: false,
+            k8s_ca_cert: String::new(),
+            k8s_client_cert: String::new(),
+            k8s_client_key: String::new(),
         }
     }
 }
@@ -249,6 +283,27 @@ impl HippoxConfig {
             github_timeout: envs::get_env_or(envs::HIPPOX_GITHUB_TIMEOUT, "30")
                 .parse()
                 .unwrap_or(30),
+            // Docker
+            docker_host: envs::get_env_or(envs::HIPPOX_DOCKER_HOST, "unix:///var/run/docker.sock"),
+            docker_api_version: envs::get_env_or(envs::HIPPOX_DOCKER_API_VERSION, ""),
+            docker_timeout: envs::get_env_or(envs::HIPPOX_DOCKER_TIMEOUT, "30")
+                .parse()
+                .unwrap_or(30),
+            docker_tls_verify: envs::is_env_true(envs::HIPPOX_DOCKER_TLS_VERIFY),
+            docker_cert_path: envs::get_env_or(envs::HIPPOX_DOCKER_CERT_PATH, ""),
+            // k8s
+            k8s_kubeconfig: envs::get_env_or(envs::HIPPOX_K8S_KUBECONFIG, ""),
+            k8s_context: envs::get_env_or(envs::HIPPOX_K8S_CONTEXT, ""),
+            k8s_namespace: envs::get_env_or(envs::HIPPOX_K8S_NAMESPACE, "default"),
+            k8s_api_server: envs::get_env_or(envs::HIPPOX_K8S_API_SERVER, ""),
+            k8s_api_token: envs::get_env_or(envs::HIPPOX_K8S_API_TOKEN, ""),
+            k8s_timeout: envs::get_env_or(envs::HIPPOX_K8S_TIMEOUT, "30")
+                .parse()
+                .unwrap_or(30),
+            k8s_insecure: envs::is_env_true(envs::HIPPOX_K8S_INSECURE),
+            k8s_ca_cert: envs::get_env_or(envs::HIPPOX_K8S_CA_CERT, ""),
+            k8s_client_cert: envs::get_env_or(envs::HIPPOX_K8S_CLIENT_CERT, ""),
+            k8s_client_key: envs::get_env_or(envs::HIPPOX_K8S_CLIENT_KEY, ""),
         }
     }
 
@@ -335,6 +390,23 @@ impl HippoxConfig {
         github_token: Option<String>,
         github_api_url: Option<String>,
         github_timeout: Option<u64>,
+        // Docker parameters
+        docker_host: Option<String>,
+        docker_api_version: Option<String>,
+        docker_timeout: Option<u64>,
+        docker_tls_verify: Option<bool>,
+        docker_cert_path: Option<String>,
+        // k8s parameters
+        k8s_kubeconfig: Option<String>,
+        k8s_context: Option<String>,
+        k8s_namespace: Option<String>,
+        k8s_api_server: Option<String>,
+        k8s_api_token: Option<String>,
+        k8s_timeout: Option<u64>,
+        k8s_insecure: Option<bool>,
+        k8s_ca_cert: Option<String>,
+        k8s_client_cert: Option<String>,
+        k8s_client_key: Option<String>,
     ) -> Self {
         let mut config = Self::load_from_env();
         if let Some(v) = lang {
@@ -500,6 +572,53 @@ impl HippoxConfig {
         }
         if let Some(v) = github_timeout {
             config.github_timeout = v;
+        }
+        // Docker
+        if let Some(v) = docker_host {
+            config.docker_host = v;
+        }
+        if let Some(v) = docker_api_version {
+            config.docker_api_version = v;
+        }
+        if let Some(v) = docker_timeout {
+            config.docker_timeout = v;
+        }
+        if let Some(v) = docker_tls_verify {
+            config.docker_tls_verify = v;
+        }
+        if let Some(v) = docker_cert_path {
+            config.docker_cert_path = v;
+        }
+        // k8s
+        if let Some(v) = k8s_kubeconfig {
+            config.k8s_kubeconfig = v;
+        }
+        if let Some(v) = k8s_context {
+            config.k8s_context = v;
+        }
+        if let Some(v) = k8s_namespace {
+            config.k8s_namespace = v;
+        }
+        if let Some(v) = k8s_api_server {
+            config.k8s_api_server = v;
+        }
+        if let Some(v) = k8s_api_token {
+            config.k8s_api_token = v;
+        }
+        if let Some(v) = k8s_timeout {
+            config.k8s_timeout = v;
+        }
+        if let Some(v) = k8s_insecure {
+            config.k8s_insecure = v;
+        }
+        if let Some(v) = k8s_ca_cert {
+            config.k8s_ca_cert = v;
+        }
+        if let Some(v) = k8s_client_cert {
+            config.k8s_client_cert = v;
+        }
+        if let Some(v) = k8s_client_key {
+            config.k8s_client_key = v;
         }
         config
     }
@@ -675,6 +794,53 @@ impl HippoxConfig {
         if let Some(v) = overrides.get("github_timeout").and_then(|x| x.as_u64()) {
             config.github_timeout = v;
         }
+        // Docker
+        if let Some(v) = overrides.get("docker_host").and_then(|x| x.as_str()) {
+            config.docker_host = v.to_string();
+        }
+        if let Some(v) = overrides.get("docker_api_version").and_then(|x| x.as_str()) {
+            config.docker_api_version = v.to_string();
+        }
+        if let Some(v) = overrides.get("docker_timeout").and_then(|x| x.as_u64()) {
+            config.docker_timeout = v;
+        }
+        if let Some(v) = overrides.get("docker_tls_verify").and_then(|x| x.as_bool()) {
+            config.docker_tls_verify = v;
+        }
+        if let Some(v) = overrides.get("docker_cert_path").and_then(|x| x.as_str()) {
+            config.docker_cert_path = v.to_string();
+        }
+        // k8s
+        if let Some(v) = overrides.get("k8s_kubeconfig").and_then(|x| x.as_str()) {
+            config.k8s_kubeconfig = v.to_string();
+        }
+        if let Some(v) = overrides.get("k8s_context").and_then(|x| x.as_str()) {
+            config.k8s_context = v.to_string();
+        }
+        if let Some(v) = overrides.get("k8s_namespace").and_then(|x| x.as_str()) {
+            config.k8s_namespace = v.to_string();
+        }
+        if let Some(v) = overrides.get("k8s_api_server").and_then(|x| x.as_str()) {
+            config.k8s_api_server = v.to_string();
+        }
+        if let Some(v) = overrides.get("k8s_api_token").and_then(|x| x.as_str()) {
+            config.k8s_api_token = v.to_string();
+        }
+        if let Some(v) = overrides.get("k8s_timeout").and_then(|x| x.as_u64()) {
+            config.k8s_timeout = v;
+        }
+        if let Some(v) = overrides.get("k8s_insecure").and_then(|x| x.as_bool()) {
+            config.k8s_insecure = v;
+        }
+        if let Some(v) = overrides.get("k8s_ca_cert").and_then(|x| x.as_str()) {
+            config.k8s_ca_cert = v.to_string();
+        }
+        if let Some(v) = overrides.get("k8s_client_cert").and_then(|x| x.as_str()) {
+            config.k8s_client_cert = v.to_string();
+        }
+        if let Some(v) = overrides.get("k8s_client_key").and_then(|x| x.as_str()) {
+            config.k8s_client_key = v.to_string();
+        }
         Ok(config)
     }
 
@@ -739,6 +905,50 @@ impl HippoxConfig {
 
     pub fn is_sqlite_configured(&self) -> bool {
         !self.sqlite_path.is_empty()
+    }
+
+    /// Check if Docker is configured
+    pub fn is_docker_configured(&self) -> bool {
+        !self.docker_host.is_empty()
+    }
+
+    /// Get Docker host
+    pub fn get_docker_host(&self) -> String {
+        self.docker_host.clone()
+    }
+
+    /// Check if k8s is configured
+    pub fn is_k8s_configured(&self) -> bool {
+        !self.k8s_kubeconfig.is_empty() || !self.k8s_api_server.is_empty()
+    }
+
+    /// Get kubeconfig path
+    pub fn get_kubeconfig(&self) -> Option<String> {
+        if self.k8s_kubeconfig.is_empty() {
+            None
+        } else {
+            Some(self.k8s_kubeconfig.clone())
+        }
+    }
+
+    /// Get default namespace
+    pub fn get_default_namespace(&self) -> String {
+        self.k8s_namespace.clone()
+    }
+
+    /// Build kubectl command with config
+    pub fn build_kubectl_command(&self) -> std::process::Command {
+        let mut cmd = std::process::Command::new("kubectl");
+
+        if let Some(kubeconfig) = self.get_kubeconfig() {
+            cmd.env("KUBECONFIG", kubeconfig);
+        }
+
+        if !self.k8s_context.is_empty() {
+            cmd.arg("--context").arg(&self.k8s_context);
+        }
+
+        cmd
     }
 }
 
@@ -834,6 +1044,23 @@ pub(crate) fn init_config_from_params(
     github_token: Option<String>,
     github_api_url: Option<String>,
     github_timeout: Option<u64>,
+    // Docker parameters
+    docker_host: Option<String>,
+    docker_api_version: Option<String>,
+    docker_timeout: Option<u64>,
+    docker_tls_verify: Option<bool>,
+    docker_cert_path: Option<String>,
+    // k8s parameters
+    k8s_kubeconfig: Option<String>,
+    k8s_context: Option<String>,
+    k8s_namespace: Option<String>,
+    k8s_api_server: Option<String>,
+    k8s_api_token: Option<String>,
+    k8s_timeout: Option<u64>,
+    k8s_insecure: Option<bool>,
+    k8s_ca_cert: Option<String>,
+    k8s_client_cert: Option<String>,
+    k8s_client_key: Option<String>,
 ) {
     let config = HippoxConfig::load_from_params(
         lang,
@@ -898,6 +1125,21 @@ pub(crate) fn init_config_from_params(
         github_token,
         github_api_url,
         github_timeout,
+        docker_host,
+        docker_api_version,
+        docker_timeout,
+        docker_tls_verify,
+        docker_cert_path,
+        k8s_kubeconfig,
+        k8s_context,
+        k8s_namespace,
+        k8s_api_server,
+        k8s_api_token,
+        k8s_timeout,
+        k8s_insecure,
+        k8s_ca_cert,
+        k8s_client_cert,
+        k8s_client_key,
     );
     let mut global = GLOBAL_CONFIG.write().unwrap();
     *global = config;

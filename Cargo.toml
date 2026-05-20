@@ -11,7 +11,21 @@ keywords = ["ai", "agent", "llm", "skills", "skills-orchestration"]
 exclude = ["assets/", "examples/", "templates/"]
 
 [features]
-default = ["db", "math"]
+default = [
+    "db",
+    "devops",
+    "document",
+    "file",
+    "helloworld",
+    "math",
+    "media",
+    "message",
+    "net",
+    "system",
+    "task",
+    "time",
+    "text",
+]
 all = [
     "db",
     "devops",
@@ -25,7 +39,9 @@ all = [
     "system",
     "task",
     "time",
+    "text",
 ]
+text = []
 db = []
 devops = []
 document = []
@@ -100,6 +116,7 @@ trust-dns-resolver = "0.23.2"
 trust-dns-proto = "0.23.2"
 whois-rust = "1.6.0"
 local-ip-address = "0.6.13"
+similar = "3.1.0"
 
 [dev-dependencies]
 tempfile = "3.27.0"
